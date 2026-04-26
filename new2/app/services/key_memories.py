@@ -208,10 +208,10 @@ def persist_and_apply(km: KeyMemory, connection=None) -> Optional[int]:
         # otherwise create our own context
         if connection is not None:
             c = connection
-            manage_ctx = False
+            ctx = None
         else:
-            c = db().__enter__()
-            manage_ctx = True
+            ctx = db()
+            c = ctx.__enter__()
         
         try:
             cur = c.execute(
@@ -272,8 +272,8 @@ def persist_and_apply(km: KeyMemory, connection=None) -> Optional[int]:
             })
             return new_id
         finally:
-            if manage_ctx:
-                db().__exit__(None, None, None)
+            if ctx is not None:
+                ctx.__exit__(None, None, None)
     except Exception as e:
         log.exception("persist_and_apply failed: %s", e)
         # Be safe: invalidate cache so next reader re-syncs with whatever

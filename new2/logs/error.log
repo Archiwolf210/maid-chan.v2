@@ -201,3 +201,47 @@ NameError: name '_EMBEDDER_STATE' is not defined
 2026-04-26 11:26:01 [WARNING ] maid | _req_log:1653 | HTTP 400 POST /api/avatar/upload
 2026-04-26 11:26:07 [WARNING ] maid | _req_log:1653 | HTTP 400 GET /api/arcs/notvalid
 2026-04-26 11:26:09 [WARNING ] maid | _req_log:1653 | HTTP 400 POST /api/avatar/upload
+2026-04-26 22:33:06 [ERROR   ] maid | _log_exc:73 | autonomous loops spawn: name '_log' is not defined
+Traceback (most recent call last):
+  File "/workspace/new2/main.py", line 1612, in _lifespan
+    start_autonomous_loops()
+  File "/workspace/new2/app/autonomous.py", line 949, in start_autonomous_loops
+    log = _log()
+          ^^^^
+NameError: name '_log' is not defined
+
+2026-04-26 22:33:11 [ERROR   ] maid | _log_exc:73 | autonomous loops spawn: name '_log' is not defined
+Traceback (most recent call last):
+  File "/workspace/new2/main.py", line 1612, in _lifespan
+    start_autonomous_loops()
+  File "/workspace/new2/app/autonomous.py", line 949, in start_autonomous_loops
+    log = _log()
+          ^^^^
+NameError: name '_log' is not defined
+
+2026-04-26 22:33:12 [WARNING ] maid | _req_log:1681 | HTTP 400 POST /api/avatar/upload
+2026-04-26 22:33:12 [WARNING ] maid | _req_log:1681 | HTTP 400 POST /api/avatar/upload
+2026-04-26 22:33:14 [WARNING ] maid | _req_log:1681 | HTTP 400 GET /api/arcs/notvalid
+2026-04-26 22:33:14 [WARNING ] maid | _req_log:1681 | HTTP 400 POST /api/avatar/upload
+2026-04-26 22:33:45 [ERROR   ] maid | _log_exc:73 | autonomous loops spawn: name '_log' is not defined
+Traceback (most recent call last):
+  File "/workspace/new2/main.py", line 1612, in _lifespan
+    start_autonomous_loops()
+  File "/workspace/new2/app/autonomous.py", line 949, in start_autonomous_loops
+    log = _log()
+          ^^^^
+NameError: name '_log' is not defined
+
+2026-04-26 22:34:09 [ERROR   ] maid | _log_exc:73 | autonomous loops spawn: _log() missing 1 required positional argument: 'msg'
+Traceback (most recent call last):
+  File "/workspace/new2/main.py", line 1612, in _lifespan
+    start_autonomous_loops()
+  File "/workspace/new2/app/autonomous.py", line 959, in start_autonomous_loops
+    log = _log()
+          ^^^^^^
+TypeError: _log() missing 1 required positional argument: 'msg'
+
+2026-04-26 22:34:10 [WARNING ] maid | _req_log:1681 | HTTP 400 POST /api/avatar/upload
+2026-04-26 22:34:10 [WARNING ] maid | _req_log:1681 | HTTP 400 POST /api/avatar/upload
+2026-04-26 22:34:12 [WARNING ] maid | _req_log:1681 | HTTP 400 GET /api/arcs/notvalid
+2026-04-26 22:34:12 [WARNING ] maid | _req_log:1681 | HTTP 400 POST /api/avatar/upload

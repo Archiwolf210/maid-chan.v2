@@ -194,10 +194,20 @@ def db():
         conn.close()
 
 
+def _log(msg: str, *a: Any) -> None:
+    """Log message via central logging utility."""
+    _log_util(msg, *a)
+
+
+def _log_exc(msg: str, exc: Exception) -> None:
+    """Log exception with traceback."""
+    _log_exc_util(msg, exc)
+
+
 def init_db():
     """Create schema + run column-add migrations + ensure master user exists."""
-    log = _log()
-    log.info("DB init: %s", _db_path())
+    from main import DB_PATH
+    _log("DB init: %s", _db_path())
     try:
         with db() as c:
             c.executescript(_SCHEMA)
@@ -209,7 +219,7 @@ def init_db():
                         if col not in existing:
                             try:
                                 c.execute(f"ALTER TABLE {table} ADD COLUMN {col} {defn}")
-                                log.info("Migrated %s.%s", table, col)
+                                _log("Migrated %s.%s", table, col)
                             except sqlite3.OperationalError:
                                 pass
                 except Exception as e:
@@ -225,7 +235,7 @@ def init_db():
             c.execute("UPDATE user_state SET total_msg_count=msg_count "
                       "WHERE total_msg_count=0 AND msg_count>0")
         _migrate_legacy()
-        log.info("DB ready")
+        _log("DB ready")
     except Exception as e:
         _log_exc("init_db", e); raise
 

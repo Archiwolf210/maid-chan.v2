@@ -2389,3 +2389,297 @@ NameError: name '_EMBEDDER_STATE' is not defined
 2026-04-26 11:26:09 [INFO    ] maid | _lifespan:1587 | Digital Human v9.1 started
 2026-04-26 11:26:09 [WARNING ] maid | _req_log:1653 | HTTP 400 POST /api/avatar/upload
 2026-04-26 11:26:09 [INFO    ] maid | _lifespan:1611 | Digital Human v9.1 stopped
+2026-04-26 22:33:06 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:33:06 [ERROR   ] maid | _log_exc:73 | autonomous loops spawn: name '_log' is not defined
+Traceback (most recent call last):
+  File "/workspace/new2/main.py", line 1612, in _lifespan
+    start_autonomous_loops()
+  File "/workspace/new2/app/autonomous.py", line 949, in start_autonomous_loops
+    log = _log()
+          ^^^^
+NameError: name '_log' is not defined
+
+2026-04-26 22:33:06 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:33:06 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /health
+2026-04-26 22:33:06 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:33:11 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:33:11 [ERROR   ] maid | _log_exc:73 | autonomous loops spawn: name '_log' is not defined
+Traceback (most recent call last):
+  File "/workspace/new2/main.py", line 1612, in _lifespan
+    start_autonomous_loops()
+  File "/workspace/new2/app/autonomous.py", line 949, in start_autonomous_loops
+    log = _log()
+          ^^^^
+NameError: name '_log' is not defined
+
+2026-04-26 22:33:11 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:33:11 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /health
+2026-04-26 22:33:11 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:33:11 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:33:12 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:33:12 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/status
+2026-04-26 22:33:12 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:33:12 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:33:12 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:33:12 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/token
+2026-04-26 22:33:12 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:33:12 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:33:12 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:33:12 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/users
+2026-04-26 22:33:12 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:33:12 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:33:12 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:33:12 [DEBUG   ] maid | _req_log:1683 | HTTP 204 GET /api/avatar/master
+2026-04-26 22:33:12 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:33:12 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:33:12 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:33:12 [DEBUG   ] maid | _req_log:1683 | HTTP 204 GET /api/avatar/maid
+2026-04-26 22:33:12 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:33:12 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:33:12 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:33:12 [WARNING ] maid | _req_log:1681 | HTTP 400 POST /api/avatar/upload
+2026-04-26 22:33:12 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:33:12 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:33:12 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:33:12 [WARNING ] maid | _req_log:1681 | HTTP 400 POST /api/avatar/upload
+2026-04-26 22:33:12 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:33:12 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:33:12 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:33:12 [INFO    ] maid | avatar_upload:2060 | Avatar uploaded uid=master kind=png bytes=67
+2026-04-26 22:33:12 [DEBUG   ] maid | _req_log:1683 | HTTP 200 POST /api/avatar/upload
+2026-04-26 22:33:12 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/avatar/master
+2026-04-26 22:33:12 [DEBUG   ] maid | _req_log:1683 | HTTP 200 DELETE /api/avatar/master
+2026-04-26 22:33:12 [DEBUG   ] maid | _req_log:1683 | HTTP 204 GET /api/avatar/master
+2026-04-26 22:33:12 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:33:12 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:33:12 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:33:12 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/evolution
+2026-04-26 22:33:12 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:33:12 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:33:13 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:33:13 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/evolution/timeline
+2026-04-26 22:33:13 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:33:13 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:33:13 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:33:13 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/evolution/timeline
+2026-04-26 22:33:13 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:33:13 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:33:13 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:33:13 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/letters
+2026-04-26 22:33:13 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:33:13 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:33:13 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:33:13 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/letters
+2026-04-26 22:33:13 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/letters/1
+2026-04-26 22:33:13 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/letters/1
+2026-04-26 22:33:13 [DEBUG   ] maid | _req_log:1683 | HTTP 200 DELETE /api/letters/1
+2026-04-26 22:33:13 [DEBUG   ] maid | _req_log:1679 | HTTP 404 DELETE /api/letters/1
+2026-04-26 22:33:13 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:33:13 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:33:13 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:33:13 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/letters
+2026-04-26 22:33:13 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/letters
+2026-04-26 22:33:13 [DEBUG   ] maid | _req_log:1683 | HTTP 200 DELETE /api/letters/2
+2026-04-26 22:33:13 [DEBUG   ] maid | _req_log:1683 | HTTP 200 DELETE /api/letters/3
+2026-04-26 22:33:13 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:33:13 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:33:13 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:33:13 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/proactive/pending
+2026-04-26 22:33:13 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:33:13 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:33:13 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:33:13 [DEBUG   ] maid | _req_log:1683 | HTTP 200 POST /api/proactive/clear
+2026-04-26 22:33:13 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:33:13 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:33:13 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:33:13 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/diary
+2026-04-26 22:33:13 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:33:13 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:33:14 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:33:14 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/diary/days
+2026-04-26 22:33:14 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:33:14 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:33:14 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:33:14 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/arcs
+2026-04-26 22:33:14 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:33:14 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:33:14 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:33:14 [WARNING ] maid | _req_log:1681 | HTTP 400 GET /api/arcs/notvalid
+2026-04-26 22:33:14 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/arcs/2026-04
+2026-04-26 22:33:14 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:33:14 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:33:14 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:33:14 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/tactical_goals
+2026-04-26 22:33:14 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:33:14 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:33:14 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:33:14 [DEBUG   ] maid | _req_log:1683 | HTTP 200 POST /api/tactical_goals/1/done
+2026-04-26 22:33:14 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:33:14 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:33:14 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:33:14 [DEBUG   ] maid | _req_log:1683 | HTTP 200 POST /api/tactical_goals/3/done
+2026-04-26 22:33:14 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:33:14 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:33:14 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:33:14 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:33:14 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:33:14 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:33:14 [INFO    ] maid | avatar_upload:2060 | Avatar uploaded uid=maid kind=png bytes=67
+2026-04-26 22:33:14 [DEBUG   ] maid | _req_log:1683 | HTTP 200 POST /api/avatar/upload
+2026-04-26 22:33:14 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/avatar/maid
+2026-04-26 22:33:14 [DEBUG   ] maid | _req_log:1683 | HTTP 200 DELETE /api/avatar/maid
+2026-04-26 22:33:14 [DEBUG   ] maid | _req_log:1683 | HTTP 204 GET /api/avatar/maid
+2026-04-26 22:33:14 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:33:14 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:33:14 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:33:14 [WARNING ] maid | _req_log:1681 | HTTP 400 POST /api/avatar/upload
+2026-04-26 22:33:14 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:33:45 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:33:45 [ERROR   ] maid | _log_exc:73 | autonomous loops spawn: name '_log' is not defined
+Traceback (most recent call last):
+  File "/workspace/new2/main.py", line 1612, in _lifespan
+    start_autonomous_loops()
+  File "/workspace/new2/app/autonomous.py", line 949, in start_autonomous_loops
+    log = _log()
+          ^^^^
+NameError: name '_log' is not defined
+
+2026-04-26 22:33:45 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:33:45 [INFO    ] maid | avatar_upload:2060 | Avatar uploaded uid=master kind=png bytes=67
+2026-04-26 22:33:45 [DEBUG   ] maid | _req_log:1683 | HTTP 200 POST /api/avatar/upload
+2026-04-26 22:33:45 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/avatar/master
+2026-04-26 22:33:45 [DEBUG   ] maid | _req_log:1683 | HTTP 200 DELETE /api/avatar/master
+2026-04-26 22:33:45 [DEBUG   ] maid | _req_log:1683 | HTTP 204 GET /api/avatar/master
+2026-04-26 22:33:45 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:34:09 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:34:09 [ERROR   ] maid | _log_exc:73 | autonomous loops spawn: _log() missing 1 required positional argument: 'msg'
+Traceback (most recent call last):
+  File "/workspace/new2/main.py", line 1612, in _lifespan
+    start_autonomous_loops()
+  File "/workspace/new2/app/autonomous.py", line 959, in start_autonomous_loops
+    log = _log()
+          ^^^^^^
+TypeError: _log() missing 1 required positional argument: 'msg'
+
+2026-04-26 22:34:09 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:34:09 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /health
+2026-04-26 22:34:09 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:34:09 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:34:09 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:34:09 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/status
+2026-04-26 22:34:09 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:34:09 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:34:09 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:34:09 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/token
+2026-04-26 22:34:09 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:34:09 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:34:10 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:34:10 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/users
+2026-04-26 22:34:10 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:34:10 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:34:10 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:34:10 [DEBUG   ] maid | _req_log:1683 | HTTP 204 GET /api/avatar/master
+2026-04-26 22:34:10 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:34:10 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:34:10 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:34:10 [DEBUG   ] maid | _req_log:1683 | HTTP 204 GET /api/avatar/maid
+2026-04-26 22:34:10 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:34:10 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:34:10 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:34:10 [WARNING ] maid | _req_log:1681 | HTTP 400 POST /api/avatar/upload
+2026-04-26 22:34:10 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:34:10 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:34:10 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:34:10 [WARNING ] maid | _req_log:1681 | HTTP 400 POST /api/avatar/upload
+2026-04-26 22:34:10 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:34:10 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:34:10 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:34:10 [INFO    ] maid | avatar_upload:2060 | Avatar uploaded uid=master kind=png bytes=67
+2026-04-26 22:34:10 [DEBUG   ] maid | _req_log:1683 | HTTP 200 POST /api/avatar/upload
+2026-04-26 22:34:10 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/avatar/master
+2026-04-26 22:34:10 [DEBUG   ] maid | _req_log:1683 | HTTP 200 DELETE /api/avatar/master
+2026-04-26 22:34:10 [DEBUG   ] maid | _req_log:1683 | HTTP 204 GET /api/avatar/master
+2026-04-26 22:34:10 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:34:10 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:34:10 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:34:10 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/evolution
+2026-04-26 22:34:10 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:34:10 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:34:10 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:34:10 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/evolution/timeline
+2026-04-26 22:34:10 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:34:10 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:34:10 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:34:10 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/evolution/timeline
+2026-04-26 22:34:10 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:34:10 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:34:11 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:34:11 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/letters
+2026-04-26 22:34:11 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:34:11 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:34:11 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:34:11 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/letters
+2026-04-26 22:34:11 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/letters/1
+2026-04-26 22:34:11 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/letters/1
+2026-04-26 22:34:11 [DEBUG   ] maid | _req_log:1683 | HTTP 200 DELETE /api/letters/1
+2026-04-26 22:34:11 [DEBUG   ] maid | _req_log:1679 | HTTP 404 DELETE /api/letters/1
+2026-04-26 22:34:11 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:34:11 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:34:11 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:34:11 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/letters
+2026-04-26 22:34:11 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/letters
+2026-04-26 22:34:11 [DEBUG   ] maid | _req_log:1683 | HTTP 200 DELETE /api/letters/2
+2026-04-26 22:34:11 [DEBUG   ] maid | _req_log:1683 | HTTP 200 DELETE /api/letters/3
+2026-04-26 22:34:11 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:34:11 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:34:11 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:34:11 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/proactive/pending
+2026-04-26 22:34:11 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:34:11 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:34:11 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:34:11 [DEBUG   ] maid | _req_log:1683 | HTTP 200 POST /api/proactive/clear
+2026-04-26 22:34:11 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:34:11 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:34:11 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:34:11 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/diary
+2026-04-26 22:34:11 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:34:11 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:34:11 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:34:11 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/diary/days
+2026-04-26 22:34:11 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:34:11 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:34:11 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:34:11 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/arcs
+2026-04-26 22:34:11 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:34:11 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:34:11 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:34:12 [WARNING ] maid | _req_log:1681 | HTTP 400 GET /api/arcs/notvalid
+2026-04-26 22:34:12 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/arcs/2026-04
+2026-04-26 22:34:12 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:34:12 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:34:12 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:34:12 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/tactical_goals
+2026-04-26 22:34:12 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:34:12 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:34:12 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:34:12 [DEBUG   ] maid | _req_log:1683 | HTTP 200 POST /api/tactical_goals/1/done
+2026-04-26 22:34:12 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:34:12 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:34:12 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:34:12 [DEBUG   ] maid | _req_log:1683 | HTTP 200 POST /api/tactical_goals/3/done
+2026-04-26 22:34:12 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:34:12 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:34:12 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:34:12 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:34:12 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:34:12 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:34:12 [INFO    ] maid | avatar_upload:2060 | Avatar uploaded uid=maid kind=png bytes=67
+2026-04-26 22:34:12 [DEBUG   ] maid | _req_log:1683 | HTTP 200 POST /api/avatar/upload
+2026-04-26 22:34:12 [DEBUG   ] maid | _req_log:1683 | HTTP 200 GET /api/avatar/maid
+2026-04-26 22:34:12 [DEBUG   ] maid | _req_log:1683 | HTTP 200 DELETE /api/avatar/maid
+2026-04-26 22:34:12 [DEBUG   ] maid | _req_log:1683 | HTTP 204 GET /api/avatar/maid
+2026-04-26 22:34:12 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
+2026-04-26 22:34:12 [INFO    ] maid | _load_token:135 | App token: 2940df12...
+2026-04-26 22:34:12 [INFO    ] maid | _lifespan:1615 | Digital Human v9.1 started
+2026-04-26 22:34:12 [WARNING ] maid | _req_log:1681 | HTTP 400 POST /api/avatar/upload
+2026-04-26 22:34:12 [INFO    ] maid | _lifespan:1639 | Digital Human v9.1 stopped
