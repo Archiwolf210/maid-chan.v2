@@ -88,7 +88,8 @@ async def _reflection_task(uid: str) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 async def _compress_ltm(uid: str) -> None:
     """Extract 4-6 facts about the user from the last ~24 messages into LTM."""
-    from main import _get_http_client, _llm_url, _clean, _detect_emotion
+    from main import _get_http_client, _llm_url, _clean
+    from app.utils.patterns import _detect_emotion
     log = _log()
     log.info("LTM compress uid=%s", uid)
     history = get_memory(uid, 40)

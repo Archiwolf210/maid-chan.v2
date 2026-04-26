@@ -266,12 +266,18 @@ def get_ltm_relevant(uid, text, limit=8):
     Combines three factors:
     1. Semantic similarity (cosine on embeddings)
     2. Keyword overlap (word-boundary matching)
-    3. Recency bias (recent events get priority boost)
+    3. Recency bias (recent events get priority boost based on config)
     
     Returns list of relevant LTM facts with blended scores.
     """
-    from main import _detect_emotion
+    from app.utils.patterns import _detect_emotion, _kw_count as _main_kw_count
+    from main import load_config
     import time
+    
+    # Load recency bias parameters from config
+    cfg = load_config().get("memory", {})
+    recency_coef = float(cfg.get("recency_bias_coefficient", 0.15))
+    decay_hours = float(cfg.get("recency_decay_hours", 24))
     
     try:
         with db() as c:
@@ -288,7 +294,7 @@ def get_ltm_relevant(uid, text, limit=8):
         for r in rows_d:
             ts = r.get('ts', 0) or 0
             age_hours = (now - ts) / 3600 if ts > 0 else 999
-            r['_recency_weight'] = max(0, 1.0 - (age_hours / 24))  # Decay over 24h
+            r['_recency_weight'] = max(0, 1.0 - (age_hours / decay_hours))  # Decay over configurable hours
 
         # 1) Semantic path
         chosen_ids = set(); ranked = []
@@ -298,15 +304,14 @@ def get_ltm_relevant(uid, text, limit=8):
             top = _cosine_topk(qvec, cand, limit)
             for sim, r in top:
                 if sim < _LTM_COS_MIN: continue
-                # Blend: semantic (75%) + importance (20%) + access_count (5%) + recency (bonus)
+                # Blend: semantic (75%) + importance (20%) + access_count (5%) + recency (config bonus)
                 base_score = sim * 0.75 + float(r["importance"]) * 0.20 + min(int(r.get("access_count") or 0), 10) * 0.005
-                recency_bonus = r.get('_recency_weight', 0) * 0.15  # Up to 15% bonus for recent
+                recency_bonus = r.get('_recency_weight', 0) * recency_coef  # Configurable bonus for recent
                 blended = base_score + recency_bonus
                 ranked.append((blended, r))
                 chosen_ids.add(r["id"])
 
         # 2) Keyword fallback with word-boundary matching
-        from main import _kw_count as _main_kw_count
         # Extract keywords from query (simple tokenization for fallback)
         query_keywords = [w for w in tl.split() if len(w) > 2]
         
@@ -316,8 +321,8 @@ def get_ltm_relevant(uid, text, limit=8):
             overlap = _main_kw_count(query_keywords, r["fact"].lower())
             sc = float(r["importance"]) + overlap * 0.08
             if r["emotion_tag"] == ue and ue != "neutral": sc += 0.15
-            # Add recency weight for keyword path too
-            sc += r.get('_recency_weight', 0) * 0.10
+            # Add recency weight for keyword path too (use same coefficient scaled)
+            sc += r.get('_recency_weight', 0) * (recency_coef * 0.67)  # ~10% default
             ranked.append((sc * 0.5, r))
 
         ranked.sort(key=lambda x: x[0], reverse=True)
