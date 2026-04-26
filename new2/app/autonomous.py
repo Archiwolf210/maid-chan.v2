@@ -268,7 +268,7 @@ async def _try_evening_nudge(uid: str, uname: str, ev_state) -> Optional[dict]:
         return None
     # Only if there was activity today (avoid greeting empty days)
     try:
-        from main import load_state
+        from app.repositories.user_state import load_state
         s = load_state(uid)
         last_act = int(s.get("last_activity_ts") or 0)
         if last_act <= 0: return None
@@ -339,7 +339,8 @@ async def _scan_once() -> None:
     queue is hard-capped by `proactive_max_queue`. At most ONE nudge of any
     kind is queued per scan tick per user (to avoid morning+weekly piling up
     at the same Sunday morning)."""
-    from main import get_users, load_state, get_user
+    from app.repositories.user_state import load_state
+    from main import get_users, get_user
     cfg = _cfg()
     log = _log()
     if not cfg.get("proactive_enabled", True):
@@ -621,7 +622,7 @@ async def _write_diary(uid: str, day: str) -> Optional[str]:
         formatted = text
         meta: dict = {}
         try:
-            from main import load_state
+            from app.repositories.user_state import load_state
             from app.utils.style_filter import format_diary_entry
             from app.models import EvolutionState
             from app.services.key_memories import get_recent_key_memories

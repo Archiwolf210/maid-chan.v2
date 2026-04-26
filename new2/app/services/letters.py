@@ -185,7 +185,8 @@ async def compose_letter_for_anchor(uid: str, key_memory_id: int) -> Optional[in
       4. Build prompt that captures Maid's voice band
       5. Call LLM (shared client), strip thinking tags, persist
     """
-    from main import _get_http_client, _llm_url, _clean, get_user, load_state
+    from app.repositories.user_state import load_state
+    from main import _get_http_client, _llm_url, _clean, get_user
     if _on_cooldown(uid):
         log.debug("letter cooldown active uid=%s", uid); return None
 

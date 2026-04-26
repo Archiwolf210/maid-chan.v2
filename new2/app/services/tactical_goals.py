@@ -47,17 +47,9 @@ import httpx
 from app.db import db
 from app.utils.style_filter import extract_json_safely
 
-from app.utils.logging import _log as _log_util, _log_exc as _log_exc_util
+from app.utils.logging import _log, _log_exc
 
 log = logging.getLogger(__name__)
-
-
-def _log():
-    return _log_util
-
-
-def _log_exc(msg, exc):
-    _log_exc_util(msg, exc)
 
 
 _HORIZON_TTL_SEC = {"day": 24 * 3600, "week": 7 * 86400}
@@ -178,7 +170,8 @@ async def refresh_goals_for_user(uid: str, force: bool = False) -> Dict[str, Opt
     `force=True` replaces existing active goals — used when the user
     manually requests "refresh my goals".
     """
-    from main import get_user, load_state
+    from app.repositories.user_state import load_state
+    from main import get_user
 
     expire_old(uid)
     out: Dict[str, Optional[int]] = {h: None for h in _HORIZONS}
