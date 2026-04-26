@@ -40,6 +40,9 @@ from fastapi.responses import FileResponse, JSONResponse, Response, StreamingRes
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+# Import utilities from isolated module to break circular dependencies
+from app.utils.patterns import _kw_count, _kw_any, _detect_emotion
+
 VERSION = "9.1"
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -85,27 +88,16 @@ def _clamp(v: float, lo: float, hi: float) -> float:
 # the opposite), "злой" inside "незлой", "счастлив" inside "несчастлив", etc.
 # Using (?:^|\W) ... (?:\W|$) catches Cyrillic boundaries correctly because
 # Python's \W is Unicode-aware and treats 'не' + word-char as a continuation.
-_KW_CACHE: dict = {}
+# NOTE: Functions moved to app/utils/patterns.py. These are deprecated aliases.
 def _kw_any(kws: tuple, text: str) -> bool:
-    """Return True if any keyword appears as a whole token in text."""
-    key = kws if isinstance(kws, tuple) else tuple(kws)
-    pat = _KW_CACHE.get(key)
-    if pat is None:
-        pat = re.compile(r"(?:^|\W)(?:" + "|".join(re.escape(k) for k in key) + r")(?:\W|$)")
-        _KW_CACHE[key] = pat
-    return bool(pat.search(text))
+    """Deprecated. Use app.utils.patterns._kw_any instead."""
+    from app.utils.patterns import _kw_any as real_fn
+    return real_fn(list(kws) if isinstance(kws, tuple) else kws, text)
 
 def _kw_count(kws, text: str) -> int:
-    """Count how many keywords from `kws` appear as whole tokens in text
-    (each keyword contributes at most once — matches the legacy semantics)."""
-    key = tuple(kws)
-    pat = _KW_CACHE.get(key)
-    if pat is None:
-        pat = re.compile(r"(?:^|\W)(?:" + "|".join(re.escape(k) for k in key) + r")(?:\W|$)")
-        _KW_CACHE[key] = pat
-    # Legacy: sum(1 for w in kws if w in text) — each kw counts once even if
-    # repeated. Replicate that: iterate kws and check each with boundary match.
-    return sum(1 for w in key if re.search(r"(?:^|\W)" + re.escape(w) + r"(?:\W|$)", text))
+    """Deprecated. Use app.utils.patterns._kw_count instead."""
+    from app.utils.patterns import _kw_count as real_fn
+    return real_fn(kws, text)
 
 def _read_json(p: str):
     with open(p, "r", encoding="utf-8") as f:
@@ -699,23 +691,18 @@ _MPROMPT = {
 }
 
 def _detect_emotion(text):
-    t=text.lower()
-    patterns={"joy":(("радость","счастье","весело","отлично","замечательно","ура"),+1.0),
-              "sadness":(("грустно","плачу","тяжело","тоскую","одинок","пусто"),-1.0),
-              "fear":(("боюсь","страшно","тревожно","паника","беспокоюсь"),-0.7),
-              "anger":(("злой","ненавижу","бесит","раздражает","возмущён"),-0.9),
-              "surprise":(("неожиданно","вдруг","удивительно"),+0.2),
-              "trust":(("верю","доверяю","честно","надёжный"),+0.6),
-              "anticipation":(("жду","скоро","мечтаю","предвкушаю"),+0.5)}
-    scores={"neutral":0.0}
-    for tag,(words,val) in patterns.items():
-        # v9.0: word-boundary match — "несчастье"/"нестрашно"/"незлой" no longer
-        # trigger joy/fear/anger through substring bleed.
-        hits=_kw_count(words,t)
-        if hits>0: scores[tag]=hits*abs(val)
-    best=max(scores,key=lambda k:scores[k])
-    valence=0.0 if best=="neutral" else patterns[best][1]*min(scores[best],1.0)
-    return best,valence
+    """Deprecated. Use app.utils.patterns._detect_emotion instead."""
+    from app.utils.patterns import _detect_emotion as real_fn
+    result = real_fn(text)
+    # Backward compatibility: return (tag, valence) tuple
+    if result is None:
+        return "neutral", 0.0
+    # Map simple tags to legacy format
+    tag_map = {"positive": ("joy", 1.0), "negative": ("sadness", -1.0)}
+    if result in tag_map:
+        tag, val = tag_map[result]
+        return tag, val
+    return "neutral", 0.0
 
 def build_cognitive_frame(uid,text,state,cfg):
     tl=text.lower(); nsfw=cfg.get("nsfw_mode",False)
