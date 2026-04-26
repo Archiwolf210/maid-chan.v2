@@ -189,7 +189,7 @@ def analyze_for_key_memory(
 # ─────────────────────────────────────────────────────────────────────────────
 #  PERSISTENCE + EVOLUTION APPLY
 # ─────────────────────────────────────────────────────────────────────────────
-def persist_and_apply(km: KeyMemory) -> Optional[int]:
+def persist_and_apply(km: KeyMemory, connection=None) -> Optional[int]:
     """Insert the key_memory row and apply trait deltas to user_state.
     Returns the new row id, or None on failure (logged, never raised).
 
@@ -198,9 +198,22 @@ def persist_and_apply(km: KeyMemory) -> Optional[int]:
     
     v9.7: Uses atomic UPDATE with increments to prevent race conditions
     when concurrent /api/chat turns try to evolve traits simultaneously.
+    
+    v9.6 P3 FIX: Accepts optional `connection` parameter to run within an
+    existing transaction (for atomicity when called from _post_chat_evolution_pass).
+    If connection is provided, caller is responsible for commit/rollback.
     """
     try:
-        with db() as c:
+        # Use provided connection if available (caller manages transaction),
+        # otherwise create our own context
+        if connection is not None:
+            c = connection
+            manage_ctx = False
+        else:
+            c = db().__enter__()
+            manage_ctx = True
+        
+        try:
             cur = c.execute(
                 "INSERT INTO key_memories(user_id,event_type,description,intensity,source_msg_id,traits_json) "
                 "VALUES(?,?,?,?,?,?)",
@@ -247,16 +260,20 @@ def persist_and_apply(km: KeyMemory) -> Optional[int]:
                 log.info("key_memory %s uid=%s id=%d type=%s int=%.2f h=%.2f→%.2f sw=%s",
                          "+evo", km.user_id, new_id, km.event_type, km.intensity,
                          cur_vals[0] - delta_h, cur_vals[0], new_sw)
-        # v9.6: cache push so next get_recent_key_memories from build_prompt
-        # is a no-DB read. Outside the `with db()` block — no lock contention.
-        _cache_prepend(km.user_id, {
-            "id": int(new_id), "ts": int(time.time()),
-            "event_type": km.event_type, "description": km.description,
-            "intensity": float(km.intensity),
-            "source_msg_id": km.source_msg_id,
-            "traits_delta": dict(km.traits_delta or {}),
-        })
-        return new_id
+            
+            # v9.6: cache push so next get_recent_key_memories from build_prompt
+            # is a no-DB read. Outside the DB block — no lock contention.
+            _cache_prepend(km.user_id, {
+                "id": int(new_id), "ts": int(time.time()),
+                "event_type": km.event_type, "description": km.description,
+                "intensity": float(km.intensity),
+                "source_msg_id": km.source_msg_id,
+                "traits_delta": dict(km.traits_delta or {}),
+            })
+            return new_id
+        finally:
+            if manage_ctx:
+                db().__exit__(None, None, None)
     except Exception as e:
         log.exception("persist_and_apply failed: %s", e)
         # Be safe: invalidate cache so next reader re-syncs with whatever

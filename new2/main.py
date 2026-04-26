@@ -473,9 +473,11 @@ def _increment_intent_count(uid: str, intent: str) -> int:
     except Exception as e:
         _log_exc("_increment_intent_count", e); return 0
 
-def _update_traits(uid: str, cog: "CognitiveFrame", msg_count: int) -> None:
+def _update_traits(uid: str, cog: "CognitiveFrame", msg_count: int, total_msg_count: int) -> None:
     """Pattern-based trait evolution: a trait only shifts after 3+ confirmations (codex3)."""
-    if msg_count == 0 or msg_count % 5 != 0:  # check every 5 msgs, but require pattern
+    # v9.6 P3 FIX: Use total_msg_count for the %5 check to avoid skipping evolution
+    # after session gap reset (msg_count resets to 0, but total_msg_count keeps growing)
+    if total_msg_count == 0 or total_msg_count % 5 != 0:
         return
     cnt = _increment_intent_count(uid, cog.intent)
     t   = load_traits(uid); spd = 0.010; changed = False
@@ -609,7 +611,7 @@ def update_state(uid,user_text,reply,cog):
         s["goals"]=_evolve_goals(s)
         # v9.1: trait evolution and goal triggers use total_msg_count — these
         # are long-horizon processes that should not reset when a session ends.
-        save_state(uid,s); _update_traits(uid,cog,s["total_msg_count"])
+        save_state(uid,s); _update_traits(uid,cog,s["msg_count"],s["total_msg_count"])
         log.debug("State uid=%s mood=%.2f att=%.2f session=%d total=%d",uid,s["mood"],s["attachment"],s["msg_count"],s["total_msg_count"])
         return s
 
@@ -1477,46 +1479,59 @@ def _post_chat_evolution_pass(uid, user_text, reply, cog, user_msg_id,
         4. unseal letters if humanity has crossed threshold
 
     Errors are isolated and never re-raised to the caller. The chat reply
-    has already been delivered to the user before this runs."""
+    has already been delivered to the user before this runs.
+    
+    v9.6 P3 FIX: Both persist_and_apply calls now run in a single DB transaction
+    to ensure atomicity — either both evolution deltas apply or neither does.
+    """
     try:
         from app.services.key_memories import analyze_for_key_memory, persist_and_apply
+        from app.db import db
         rp_trans = (prev_rp_mode, new_rp_mode) if prev_rp_mode != new_rp_mode else None
         anchored_ids: list[int] = []
 
-        if user_msg_id and user_msg_id > 0:
-            u_imp, _et, u_val, _it, _tp = _score_mem("user", user_text, cog)
-            u_cog_view = type("CV", (), {
-                "emotion_valence": u_val,
-                "emotion_tag":     getattr(cog, "emotion_tag", ""),
-                "intent":          getattr(cog, "intent", ""),
-                "response_mode":   getattr(cog, "response_mode", ""),
-                "maid_emotion":    getattr(cog, "maid_emotion", ""),
-            })()
-            km_u = analyze_for_key_memory(uid, "user", user_text, u_cog_view,
-                                          importance=u_imp, msg_id=user_msg_id,
-                                          rp_mode_transition=rp_trans,
-                                          total_msg_count=total_msg_count)
-            if km_u:
-                rid = persist_and_apply(km_u)
-                if rid and km_u.intensity >= 0.8:
-                    anchored_ids.append(int(rid))
-        if asst_msg_id and asst_msg_id > 0:
-            a_imp, _et, a_val, _it, _tp = _score_mem("assistant", reply, cog)
-            a_cog_view = type("CV", (), {
-                "emotion_valence": a_val,
-                "emotion_tag":     getattr(cog, "maid_emotion", "") or getattr(cog, "emotion_tag", ""),
-                "intent":          getattr(cog, "intent", ""),
-                "response_mode":   getattr(cog, "response_mode", ""),
-                "maid_emotion":    getattr(cog, "maid_emotion", ""),
-            })()
-            km_a = analyze_for_key_memory(uid, "assistant", reply, a_cog_view,
-                                          importance=a_imp, msg_id=asst_msg_id,
-                                          rp_mode_transition=None,
-                                          total_msg_count=total_msg_count)
-            if km_a:
-                rid = persist_and_apply(km_a)
-                if rid and km_a.intensity >= 0.8:
-                    anchored_ids.append(int(rid))
+        with db() as c:
+            # Start explicit transaction for atomicity of both persist_and_apply calls
+            c.execute("BEGIN IMMEDIATE")
+            try:
+                if user_msg_id and user_msg_id > 0:
+                    u_imp, _et, u_val, _it, _tp = _score_mem("user", user_text, cog)
+                    u_cog_view = type("CV", (), {
+                        "emotion_valence": u_val,
+                        "emotion_tag":     getattr(cog, "emotion_tag", ""),
+                        "intent":          getattr(cog, "intent", ""),
+                        "response_mode":   getattr(cog, "response_mode", ""),
+                        "maid_emotion":    getattr(cog, "maid_emotion", ""),
+                    })()
+                    km_u = analyze_for_key_memory(uid, "user", user_text, u_cog_view,
+                                                  importance=u_imp, msg_id=user_msg_id,
+                                                  rp_mode_transition=rp_trans,
+                                                  total_msg_count=total_msg_count)
+                    if km_u:
+                        rid = persist_and_apply(km_u, connection=c)
+                        if rid and km_u.intensity >= 0.8:
+                            anchored_ids.append(int(rid))
+                if asst_msg_id and asst_msg_id > 0:
+                    a_imp, _et, a_val, _it, _tp = _score_mem("assistant", reply, cog)
+                    a_cog_view = type("CV", (), {
+                        "emotion_valence": a_val,
+                        "emotion_tag":     getattr(cog, "maid_emotion", "") or getattr(cog, "emotion_tag", ""),
+                        "intent":          getattr(cog, "intent", ""),
+                        "response_mode":   getattr(cog, "response_mode", ""),
+                        "maid_emotion":    getattr(cog, "maid_emotion", ""),
+                    })()
+                    km_a = analyze_for_key_memory(uid, "assistant", reply, a_cog_view,
+                                                  importance=a_imp, msg_id=asst_msg_id,
+                                                  rp_mode_transition=None,
+                                                  total_msg_count=total_msg_count)
+                    if km_a:
+                        rid = persist_and_apply(km_a, connection=c)
+                        if rid and km_a.intensity >= 0.8:
+                            anchored_ids.append(int(rid))
+                c.execute("COMMIT")
+            except Exception:
+                c.execute("ROLLBACK")
+                raise
         return anchored_ids
     except Exception as e:
         _log_exc("post-chat evolution pass", e)
