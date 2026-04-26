@@ -45,7 +45,17 @@ from typing import Any, Dict, List, Optional, Tuple
 from app.db import db
 from app.models import EVENT_TYPES, EvolutionState, KeyMemory
 
+from app.utils.logging import _log as _log_util, _log_exc as _log_exc_util
+
 log = logging.getLogger(__name__)
+
+
+def _log():
+    return _log_util
+
+
+def _log_exc(msg, exc):
+    _log_exc_util(msg, exc)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

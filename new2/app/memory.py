@@ -33,14 +33,15 @@ import httpx
 from app.db import db
 
 
+from app.utils.logging import _log as _log_util, _log_exc as _log_exc_util
+
+
 def _log():
-    from main import log
-    return log
+    return _log_util
 
 
 def _log_exc(msg, exc):
-    from main import _log_exc as _le
-    _le(msg, exc)
+    _log_exc_util(msg, exc)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
