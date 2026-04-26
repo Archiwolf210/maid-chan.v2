@@ -100,7 +100,8 @@ def test_avatar_upload_roundtrip(client, headers):
     r3 = client.delete("/api/avatar/master", headers=headers)
     assert r3.status_code == 200
     r4 = client.get("/api/avatar/master")
-    assert r4.status_code == 404
+    # After deletion, endpoint returns 204 No Content (not 404) to avoid UI error spam
+    assert r4.status_code == 204
 
 
 # ─────────────────────────────────────────────────────────────────────────────

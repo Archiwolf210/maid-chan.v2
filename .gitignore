@@ -1,16 +1,5 @@
 ```
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-
 # Logs
 *.log
-logs/
-
-# Environment
-.env
-.env.local
-.env.*
+new2/logs/
 ```

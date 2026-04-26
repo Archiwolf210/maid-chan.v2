@@ -245,3 +245,38 @@ TypeError: _log() missing 1 required positional argument: 'msg'
 2026-04-26 22:34:10 [WARNING ] maid | _req_log:1681 | HTTP 400 POST /api/avatar/upload
 2026-04-26 22:34:12 [WARNING ] maid | _req_log:1681 | HTTP 400 GET /api/arcs/notvalid
 2026-04-26 22:34:12 [WARNING ] maid | _req_log:1681 | HTTP 400 POST /api/avatar/upload
+2026-04-26 22:36:59 [ERROR   ] maid | _log_exc:73 | autonomous loops spawn: _log() missing 1 required positional argument: 'msg'
+Traceback (most recent call last):
+  File "/workspace/new2/main.py", line 1612, in _lifespan
+    start_autonomous_loops()
+  File "/workspace/new2/app/autonomous.py", line 959, in start_autonomous_loops
+    log = _log()
+          ^^^^^^
+TypeError: _log() missing 1 required positional argument: 'msg'
+
+2026-04-26 22:36:59 [WARNING ] maid | _req_log:1681 | HTTP 400 POST /api/avatar/upload
+2026-04-26 22:36:59 [WARNING ] maid | _req_log:1681 | HTTP 400 POST /api/avatar/upload
+2026-04-26 22:37:01 [WARNING ] maid | _req_log:1681 | HTTP 400 GET /api/arcs/notvalid
+2026-04-26 22:37:02 [WARNING ] maid | _req_log:1681 | HTTP 400 POST /api/avatar/upload
+2026-04-26 22:37:30 [ERROR   ] maid | _log_exc:73 | autonomous loops spawn: _log() missing 1 required positional argument: 'msg'
+Traceback (most recent call last):
+  File "/workspace/new2/main.py", line 1612, in _lifespan
+    start_autonomous_loops()
+  File "/workspace/new2/app/autonomous.py", line 959, in start_autonomous_loops
+    log = _log()
+          ^^^^^^
+TypeError: _log() missing 1 required positional argument: 'msg'
+
+2026-04-26 22:37:36 [ERROR   ] maid | _log_exc:73 | autonomous loops spawn: _log() missing 1 required positional argument: 'msg'
+Traceback (most recent call last):
+  File "/workspace/new2/main.py", line 1612, in _lifespan
+    start_autonomous_loops()
+  File "/workspace/new2/app/autonomous.py", line 959, in start_autonomous_loops
+    log = _log()
+          ^^^^^^
+TypeError: _log() missing 1 required positional argument: 'msg'
+
+2026-04-26 22:37:37 [WARNING ] maid | _req_log:1681 | HTTP 400 POST /api/avatar/upload
+2026-04-26 22:37:37 [WARNING ] maid | _req_log:1681 | HTTP 400 POST /api/avatar/upload
+2026-04-26 22:37:38 [WARNING ] maid | _req_log:1681 | HTTP 400 GET /api/arcs/notvalid
+2026-04-26 22:37:39 [WARNING ] maid | _req_log:1681 | HTTP 400 POST /api/avatar/upload
