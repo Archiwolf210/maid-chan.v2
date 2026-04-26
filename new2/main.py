@@ -1305,124 +1305,137 @@ async def _chat_sse(uid,user_text,cog):
         yield b"data: " + _jdumps({"type":"memory_trace","step":"empty"}) + b"\n\n"
     # Load history BEFORE saving user message (prevents prompt duplication)
     history=await loop.run_in_executor(exe,get_memory_for_prompt,uid,limit)
-    # Save user message as PENDING -- completed after successful LLM, discarded on error (P2 fix)
-    user_msg_id=await loop.run_in_executor(exe,save_message,uid,"user",user_text,cog,"user_input","pending")
-    system_static, system_dynamic = await loop.run_in_executor(exe,build_prompt,uid,cog,ltm_facts)
-    # v9.4: third trace step -- just before the model is hit. UI swaps the
-    # status line to "Мэйд обдумывает ответ" until first token arrives.
-    yield b"data: " + _jdumps({"type":"memory_trace","step":"thinking"}) + b"\n\n"
-    # KV-cache-friendly layout: static system + history is long-lived → llama-server caches it.
-    # Dynamic system goes RIGHT BEFORE the new user turn so freshness doesn't invalidate the cache.
-    messages = (
-        [{"role": "system", "content": system_static}]
-        + history
-        + [{"role": "system", "content": system_dynamic}]
-        + [{"role": "user", "content": user_text}]
-    )
-    full=""
-    async for tok in _stream(messages):
-        full+=tok
-        yield b"data: " + _jdumps({"type":"token","text":tok}) + b"\n\n"
-    full=full.strip()
-    if full and not _is_err(full):
-        # v9.5: wrap post-stream pipeline so a failure in _post_process /
-        # update_state / key_memory pass DOES NOT leave the user msg row in
-        # 'pending' forever. We discard the pending row, surface an error
-        # event to the client, and exit the generator cleanly.
-        try:
-            # v9.6: _post_process now returns a tuple. The bulk of the
-            # post-chat work (key_memory detection, evolution apply, letter
-            # composer scheduling, sealed-letter unsealing) was moved out to
-            # `_spawn_post_chat_async` — fired AFTER the done_payload so the
-            # user sees the final state immediately while the heavy work
-            # runs in the background.
-            state, asst_msg_id, prev_rp_mode, new_rp_mode = await loop.run_in_executor(
-                exe, _post_process, uid, full, user_text, cog, user_msg_id)
-        except Exception as _post_err:
-            _log_exc("_post_process failed mid-stream", _post_err)
+    
+    # v9.6 P2 FIX: Wrap entire chat pipeline in try/except to prevent orphaned
+    # 'pending' messages if build_prompt() or _stream() fails.
+    user_msg_id = None
+    try:
+        # Save user message as PENDING -- completed after successful LLM
+        user_msg_id=await loop.run_in_executor(exe,save_message,uid,"user",user_text,cog,"user_input","pending")
+        system_static, system_dynamic = await loop.run_in_executor(exe,build_prompt,uid,cog,ltm_facts)
+        # v9.4: third trace step -- just before the model is hit. UI swaps the
+        # status line to "Мэйд обдумывает ответ" until first token arrives.
+        yield b"data: " + _jdumps({"type":"memory_trace","step":"thinking"}) + b"\n\n"
+        # KV-cache-friendly layout: static system + history is long-lived → llama-server caches it.
+        # Dynamic system goes RIGHT BEFORE the new user turn so freshness doesn't invalidate the cache.
+        messages = (
+            [{"role": "system", "content": system_static}]
+            + history
+            + [{"role": "system", "content": system_dynamic}]
+            + [{"role": "user", "content": user_text}]
+        )
+        full=""
+        async for tok in _stream(messages):
+            full+=tok
+            yield b"data: " + _jdumps({"type":"token","text":tok}) + b"\n\n"
+        full=full.strip()
+        if full and not _is_err(full):
+            # v9.5: wrap post-stream pipeline so a failure in _post_process /
+            # update_state / key_memory pass DOES NOT leave the user msg row in
+            # 'pending' forever. We discard the pending row, surface an error
+            # event to the client, and exit the generator cleanly.
+            try:
+                # v9.6: _post_process now returns a tuple. The bulk of the
+                # post-chat work (key_memory detection, evolution apply, letter
+                # composer scheduling, sealed-letter unsealing) was moved out to
+                # `_spawn_post_chat_async` — fired AFTER the done_payload so the
+                # user sees the final state immediately while the heavy work
+                # runs in the background.
+                state, asst_msg_id, prev_rp_mode, new_rp_mode = await loop.run_in_executor(
+                    exe, _post_process, uid, full, user_text, cog, user_msg_id)
+            except Exception as _post_err:
+                _log_exc("_post_process failed mid-stream", _post_err)
+                try: await loop.run_in_executor(exe, _discard_pending, uid, user_msg_id)
+                except Exception: pass
+                yield b"data: " + _jdumps({"type":"error","message":"post-process failed"}) + b"\n\n"
+                return
+            thoughts=await loop.run_in_executor(exe,compute_thoughts,uid,user_text,state,cog)
+            action=get_action(user_text,full,state,cfg,cog); scene=get_scene()
+            open_topics=await loop.run_in_executor(exe,get_open_topics,uid,2)
+            # v9.6: rp_scene_state already known from _post_process (new_rp_mode);
+            # no need for an extra DB load just for the mode field.
+            session_count = int(state.get("msg_count",0))
+            total_count   = int(state.get("total_msg_count",session_count))
+            # v9.6: read recent_kms from in-memory cache (zero DB on the hot path
+            # if the cache is warm). Cache invalidation is push-based from
+            # persist_and_apply, so we never serve stale data wrt our own writes.
+            recent_kms = []
+            try:
+                from app.services.key_memories import get_recent_key_memories
+                recent_kms = get_recent_key_memories(uid, 3)
+            except Exception as e:
+                _log_exc("recent_kms in done_payload", e)
+            done_payload = {"type":"done","action":action,"scene":scene,"thoughts":thoughts,
+                "open_topics":[t["topic"][:80] for t in open_topics],
+                "rp_mode":new_rp_mode,
+                "cognitive":{"intent":cog.intent,"response_mode":cog.response_mode,"meaning":cog.meaning,"maid_emotion":cog.maid_emotion,"maid_intention":cog.maid_intention},
+                "state":{"mood":round(state["mood"],3),"trust":round(state["trust"],3),"fear":round(state["fear"],3),"attachment":round(state["attachment"],3),"curiosity":round(state.get("curiosity",0.5),3),"playfulness":round(state.get("playfulness",0.5),3),"warmth":round(state.get("warmth",0.6),3),"confidence":round(state.get("confidence",0.5),3),"openness":round(state.get("openness",0.5),3),"session_messages":session_count,"total_messages":total_count,"goals":[g for g in state.get("goals",[]) if g.get("status")=="active"],
+                    "humanity_level":round(float(state.get("humanity_level",0.0)),3),
+                    "self_awareness":round(float(state.get("self_awareness",0.0)),3),
+                    "affection":round(float(state.get("affection",0.0)),3),
+                    "software_version":str(state.get("software_version","1.0.0"))},
+                "key_memories":recent_kms}
+            yield b"data: " + _jdumps(done_payload) + b"\n\n"
+
+            # v9.6: HEAVY post-chat work now runs AFTER the done_payload yields.
+            # The user already has Maid's final state on screen; key_memory
+            # detection, evolution apply, letter scheduling and unseal happen
+            # in the background without blocking SSE.
+            try:
+                _track(asyncio.create_task(_spawn_post_chat_async(
+                    uid, user_text, full, cog, user_msg_id, asst_msg_id,
+                    prev_rp_mode, new_rp_mode, total_count)))
+            except Exception as e:
+                _log_exc("schedule post-chat async", e)
+            # v9.1: schedule the immersive (action / atmosphere / thought) update.
+            # READ-ONLY w.r.t. memory — only writes to rp_scene + process cache.
+            # Cancellation-safe: a brand-new user turn cancels this one cleanly.
+            try:
+                now_ts = int(time.time())
+                gap_hours = max(0.0, (now_ts - prev_last_activity)/3600.0) if prev_last_activity>0 else 0.0
+                schedule_live_scene(
+                    uid,
+                    last_exchange=f"USER: {user_text[:300]}\nМЭЙД: {full[:300]}",
+                    state=state,
+                    cog_intent=cog.intent,
+                    rp_mode=new_rp_mode,
+                    total_count=total_count,
+                    session_count=session_count,
+                    gap_hours=gap_hours,
+                )
+            except Exception as e:
+                _log_exc("schedule_live_scene", e)  # never break the chat path
+            # v9.1: lifetime triggers — pinned to total_msg_count so periodic
+            # tasks fire on real corpus growth, NOT on session boundaries
+            # (otherwise a clear-and-restart could re-trigger compression on
+            # an already-compressed slice).
+            mc=total_count; ce=cfg.get("memory",{}).get("compress_every",40)
+            # v9.0: all background tasks are pinned via _track() so GC can't kill them mid-run.
+            # Regular interval compression
+            if mc%ce==0 and mc>0:
+                _track(asyncio.create_task(_compress_ltm(uid)))
+            # Emotional intensity trigger: compress LTM when a very emotional exchange happens
+            elif cog.intensity > 0.75 and mc > 10 and mc % 5 == 0:
+                _track(asyncio.create_task(_compress_ltm(uid)))
+            # Reflection every 40 messages
+            if mc%40==0 and mc>0:
+                _track(asyncio.create_task(_reflection_task(uid)))
+            # Scene summary: update every 20 messages (for RP continuity across restarts)
+            if mc%20==0 and mc>0:
+                last_ex = f"USER: {user_text[:200]}\nMAID: {full[:200]}"
+                _track(asyncio.create_task(_update_scene_summary_async(uid, last_ex)))
+            else:
+                # Rollback: discard pending user message to keep memory consistent
+                await loop.run_in_executor(exe,_discard_pending,uid,user_msg_id)
+                yield b"data: " + _jdumps({"type":"error","message":full or "LLM error"}) + b"\n\n"
+    except Exception as _pipeline_err:
+        # P2 FIX: Catch any error in build_prompt() or _stream() and cleanup
+        _log_exc("chat pipeline error", _pipeline_err)
+        if user_msg_id:
             try: await loop.run_in_executor(exe, _discard_pending, uid, user_msg_id)
             except Exception: pass
-            yield b"data: " + _jdumps({"type":"error","message":"post-process failed"}) + b"\n\n"
-            return
-        thoughts=await loop.run_in_executor(exe,compute_thoughts,uid,user_text,state,cog)
-        action=get_action(user_text,full,state,cfg,cog); scene=get_scene()
-        open_topics=await loop.run_in_executor(exe,get_open_topics,uid,2)
-        # v9.6: rp_scene_state already known from _post_process (new_rp_mode);
-        # no need for an extra DB load just for the mode field.
-        session_count = int(state.get("msg_count",0))
-        total_count   = int(state.get("total_msg_count",session_count))
-        # v9.6: read recent_kms from in-memory cache (zero DB on the hot path
-        # if the cache is warm). Cache invalidation is push-based from
-        # persist_and_apply, so we never serve stale data wrt our own writes.
-        recent_kms = []
-        try:
-            from app.services.key_memories import get_recent_key_memories
-            recent_kms = get_recent_key_memories(uid, 3)
-        except Exception as e:
-            _log_exc("recent_kms in done_payload", e)
-        done_payload = {"type":"done","action":action,"scene":scene,"thoughts":thoughts,
-            "open_topics":[t["topic"][:80] for t in open_topics],
-            "rp_mode":new_rp_mode,
-            "cognitive":{"intent":cog.intent,"response_mode":cog.response_mode,"meaning":cog.meaning,"maid_emotion":cog.maid_emotion,"maid_intention":cog.maid_intention},
-            "state":{"mood":round(state["mood"],3),"trust":round(state["trust"],3),"fear":round(state["fear"],3),"attachment":round(state["attachment"],3),"curiosity":round(state.get("curiosity",0.5),3),"playfulness":round(state.get("playfulness",0.5),3),"warmth":round(state.get("warmth",0.6),3),"confidence":round(state.get("confidence",0.5),3),"openness":round(state.get("openness",0.5),3),"session_messages":session_count,"total_messages":total_count,"goals":[g for g in state.get("goals",[]) if g.get("status")=="active"],
-                "humanity_level":round(float(state.get("humanity_level",0.0)),3),
-                "self_awareness":round(float(state.get("self_awareness",0.0)),3),
-                "affection":round(float(state.get("affection",0.0)),3),
-                "software_version":str(state.get("software_version","1.0.0"))},
-            "key_memories":recent_kms}
-        yield b"data: " + _jdumps(done_payload) + b"\n\n"
-
-        # v9.6: HEAVY post-chat work now runs AFTER the done_payload yields.
-        # The user already has Maid's final state on screen; key_memory
-        # detection, evolution apply, letter scheduling and unseal happen
-        # in the background without blocking SSE.
-        try:
-            _track(asyncio.create_task(_spawn_post_chat_async(
-                uid, user_text, full, cog, user_msg_id, asst_msg_id,
-                prev_rp_mode, new_rp_mode, total_count)))
-        except Exception as e:
-            _log_exc("schedule post-chat async", e)
-        # v9.1: schedule the immersive (action / atmosphere / thought) update.
-        # READ-ONLY w.r.t. memory — only writes to rp_scene + process cache.
-        # Cancellation-safe: a brand-new user turn cancels this one cleanly.
-        try:
-            now_ts = int(time.time())
-            gap_hours = max(0.0, (now_ts - prev_last_activity)/3600.0) if prev_last_activity>0 else 0.0
-            schedule_live_scene(
-                uid,
-                last_exchange=f"USER: {user_text[:300]}\nМЭЙД: {full[:300]}",
-                state=state,
-                cog_intent=cog.intent,
-                rp_mode=new_rp_mode,
-                total_count=total_count,
-                session_count=session_count,
-                gap_hours=gap_hours,
-            )
-        except Exception as e:
-            _log_exc("schedule_live_scene", e)  # never break the chat path
-        # v9.1: lifetime triggers — pinned to total_msg_count so periodic
-        # tasks fire on real corpus growth, NOT on session boundaries
-        # (otherwise a clear-and-restart could re-trigger compression on
-        # an already-compressed slice).
-        mc=total_count; ce=cfg.get("memory",{}).get("compress_every",40)
-        # v9.0: all background tasks are pinned via _track() so GC can't kill them mid-run.
-        # Regular interval compression
-        if mc%ce==0 and mc>0:
-            _track(asyncio.create_task(_compress_ltm(uid)))
-        # Emotional intensity trigger: compress LTM when a very emotional exchange happens
-        elif cog.intensity > 0.75 and mc > 10 and mc % 5 == 0:
-            _track(asyncio.create_task(_compress_ltm(uid)))
-        # Reflection every 40 messages
-        if mc%40==0 and mc>0:
-            _track(asyncio.create_task(_reflection_task(uid)))
-        # Scene summary: update every 20 messages (for RP continuity across restarts)
-        if mc%20==0 and mc>0:
-            last_ex = f"USER: {user_text[:200]}\nMAID: {full[:200]}"
-            _track(asyncio.create_task(_update_scene_summary_async(uid, last_ex)))
-    else:
-        # Rollback: discard pending user message to keep memory consistent
-        await loop.run_in_executor(exe,_discard_pending,uid,user_msg_id)
-        yield b"data: " + _jdumps({"type":"error","message":full or "LLM error"}) + b"\n\n"
+        yield b"data: " + _jdumps({"type":"error","message":"internal error"}) + b"\n\n"
+        return
 
 def _post_process(uid, reply, user_text, cog, user_msg_id):
     """v9.6: streamlined hot-path post-processing.
