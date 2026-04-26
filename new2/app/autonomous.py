@@ -225,9 +225,13 @@ async def _generate_time_nudge(uname: str, kind: str, ev_state, today_ks: list) 
 
 
 def _within_window(now_dt: datetime, lo_h: int, hi_h: int) -> bool:
-    """Inclusive-lo, exclusive-hi hour window check, local time."""
+    """Inclusive hour window check, local time.
+    
+    Window includes both boundaries: lo_h <= h <= hi_h
+    Example: morning_window_lo=7, morning_window_hi=10 → hours 7,8,9,10
+    """
     h = now_dt.hour
-    return (lo_h <= h < hi_h)
+    return (lo_h <= h <= hi_h)
 
 
 def _last_kind_ts(uid: str, kind: str) -> float:
