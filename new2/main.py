@@ -1522,7 +1522,10 @@ async def _spawn_post_chat_async(uid, user_text, reply, cog, user_msg_id,
                                  total_msg_count):
     """Wrapper coroutine: runs the sync evolution pass off-loop, then
     schedules an LLM letter composer if any high-intensity anchor fired,
-    then unseals letters if humanity climbed past the threshold."""
+    then unseals letters if humanity climbed past the threshold.
+    
+    v10.0: Also triggers diary hooks for real-time diary writing decisions.
+    """
     loop = asyncio.get_running_loop()
     exe = _get_executor()
     try:
@@ -1532,6 +1535,7 @@ async def _spawn_post_chat_async(uid, user_text, reply, cog, user_msg_id,
             prev_rp_mode, new_rp_mode, total_msg_count)
     except Exception as e:
         _log_exc("evolution pass scheduler", e); anchored_ids = []
+    
     # Letter for strongest anchor
     if anchored_ids:
         try:
@@ -1540,6 +1544,7 @@ async def _spawn_post_chat_async(uid, user_text, reply, cog, user_msg_id,
             _track(asyncio.create_task(compose_letter_for_anchor(uid, top)))
         except Exception as e:
             _log_exc("schedule letter composer", e)
+    
     # Unseal sealed letters if humanity has risen past the gate
     try:
         from app.services.letters import unseal_below_threshold
@@ -1548,6 +1553,82 @@ async def _spawn_post_chat_async(uid, user_text, reply, cog, user_msg_id,
                                    float((s or {}).get("humanity_level", 0.0)))
     except Exception as e:
         _log_exc("unseal letters", e)
+    
+    # v10.0: Trigger diary hook - check if this conversation warrants immediate diary entry
+    try:
+        await _trigger_diary_hook(uid, user_text, reply, anchored_ids)
+    except Exception as e:
+        _log_exc("diary hook trigger", e)
+
+
+async def _trigger_diary_hook(uid: str, user_text: str, reply: str, anchored_ids: list):
+    """v10.0: Check if current conversation should trigger immediate diary writing.
+    
+    This implements the 'Tools as Internal Skills' pattern from OpenClaw.
+    Instead of waiting for daily scan, Мэйд can decide to write diary immediately
+    when something important happens.
+    """
+    from app.services.key_memories import get_recent_key_memories
+    
+    # If we have high-intensity anchors (>=0.8), consider immediate diary
+    high_intensity_anchors = [aid for aid in anchored_ids if aid > 0]
+    
+    if not high_intensity_anchors:
+        return  # No strong trigger for immediate diary
+    
+    # Check if diary already exists for today
+    today = datetime.now().strftime("%Y-%m-%d")
+    try:
+        with db() as c:
+            existing = c.execute(
+                "SELECT id FROM diary_entries WHERE user_id=? AND day=?",
+                (uid, today)
+            ).fetchone()
+        
+        if existing:
+            return  # Already wrote diary today
+        
+        # Get recent key memories to provide context
+        kms = get_recent_key_memories(uid, limit=10)
+        
+        # Call hook if exists
+        await _call_diary_hook(uid, today, high_intensity_anchors, kms)
+        
+    except Exception as e:
+        _log_exc("diary hook check", e)
+
+
+async def _call_diary_hook(uid: str, day: str, anchor_ids: list, key_memories: list):
+    """v10.0: Execute diary hook if user has created one.
+    
+    This follows the Hooks System pattern from OpenClaw.
+    If hooks/on_diary.py exists, it will be called with context.
+    """
+    from pathlib import Path
+    
+    hook_path = Path("hooks/on_diary.py")
+    if not hook_path.exists():
+        return  # No hook installed
+    
+    try:
+        # Import hook dynamically
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("on_diary", hook_path)
+        if spec and spec.loader:
+            hook_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(hook_module)
+            
+            # Call hook if it has on_diary_written function
+            if hasattr(hook_module, 'on_diary_written'):
+                await hook_module.on_diary_written(
+                    uid=uid,
+                    day=day,
+                    anchor_ids=anchor_ids,
+                    key_memories=key_memories
+                )
+                _log(f"Diary hook executed for uid={uid}")
+    except Exception as e:
+        _log_exc("diary hook execution", e)
 
 # ── FASTAPI ───────────────────────────────────────────────────────────────────
 async def _periodic_ltm_backfill():
