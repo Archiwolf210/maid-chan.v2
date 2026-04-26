@@ -968,7 +968,6 @@ def get_action(user_text,reply,state,cfg,cog):
 
 # ── THOUGHTS ──────────────────────────────────────────────────────────────────
 def compute_thoughts(uid,text,state,cog):
-    # v9.5: `trust` was unpacked but never used in this function body.
     mood=state["mood"]; fear=state["fear"]; att=state["attachment"]
     # v9.1: dual-counter semantics for thoughts.
     #   `session` (msg_count) drives "first word of session" — each new session

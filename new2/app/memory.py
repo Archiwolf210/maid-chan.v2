@@ -32,6 +32,17 @@ import httpx
 
 from app.db import db
 
+# Lazy numpy import for embedding operations
+_np = None  # type: ignore
+
+
+def _get_numpy():
+    """Lazy-load numpy only when needed for embedding operations."""
+    global _np
+    if _np is None:
+        import numpy as _np  # type: ignore
+    return _np
+
 
 def _log():
     from main import log
@@ -148,12 +159,12 @@ def get_embedder():
             return None, None, None
         try:
             from fastembed import TextEmbedding  # type: ignore
-            import numpy as _np  # type: ignore
+            _np_local = _get_numpy()
             log.info("Loading embedding model: %s (threads=%d) -- first run may download ~1 GB",
                      cfg["model"], cfg["threads"])
             m = TextEmbedding(model_name=cfg["model"], threads=cfg["threads"])
             probe = list(m.embed(["passage: hello"]))
-            dim = int(_np.asarray(probe[0]).shape[0]) if probe else 0
+            dim = int(_np_local.asarray(probe[0]).shape[0]) if probe else 0
             st["model"], st["name"], st["dim"], st["tried"] = m, cfg["model"], dim, True
             log.info("Embedding model ready: dim=%d", dim)
             return m, cfg["model"], dim
@@ -169,13 +180,13 @@ def encode_text(text: str, is_query: bool = False) -> Optional[bytes]:
     m, _name, _dim = get_embedder()
     if m is None: return None
     try:
-        import numpy as _np  # type: ignore
+        _np_local = _get_numpy()
         prefix = "query: " if is_query else "passage: "
         vecs = list(m.embed([prefix + text[:2000]]))
         if not vecs: return None
-        v = _np.asarray(vecs[0], dtype=_np.float32)
-        n = float(_np.linalg.norm(v)) or 1.0
-        v = (v / n).astype(_np.float32, copy=False)
+        v = _np_local.asarray(vecs[0], dtype=_np_local.float32)
+        n = float(_np_local.linalg.norm(v)) or 1.0
+        v = (v / n).astype(_np_local.float32, copy=False)
         return v.tobytes()
     except Exception as e:
         _log_exc("encode_text", e); return None
@@ -184,8 +195,8 @@ def encode_text(text: str, is_query: bool = False) -> Optional[bytes]:
 def _decode_vec(blob: Optional[bytes]):
     if not blob: return None
     try:
-        import numpy as _np  # type: ignore
-        return _np.frombuffer(blob, dtype=_np.float32)
+        _np_local = _get_numpy()
+        return _np_local.frombuffer(blob, dtype=_np_local.float32)
     except Exception:
         return None
 
@@ -194,13 +205,13 @@ def _cosine_topk(qblob: bytes, candidates: list, k: int) -> list:
     """Return [(score, candidate_dict), ...] sorted desc.
     Cosine collapses to dot-product because all vectors are L2-normalized."""
     try:
-        import numpy as _np  # type: ignore
-        q = _np.frombuffer(qblob, dtype=_np.float32)
+        _np_local = _get_numpy()
+        q = _np_local.frombuffer(qblob, dtype=_np_local.float32)
         scored = []
         for r in candidates:
             v = _decode_vec(r.get("embedding"))
             if v is None or v.shape != q.shape: continue
-            scored.append((float(_np.dot(q, v)), r))
+            scored.append((float(_np_local.dot(q, v)), r))
         scored.sort(key=lambda x: x[0], reverse=True)
         return scored[:k]
     except Exception as e:
@@ -224,13 +235,13 @@ def _ltm_backfill_embeddings(max_rows: int = 200) -> int:
         updated = 0
         batch_texts = [("passage: " + (r["fact"] or ""))[:2000] for r in rows]
         try:
-            import numpy as _np  # type: ignore
+            _np_local = _get_numpy()
             vecs = list(m.embed(batch_texts))
             blobs = []
             for v in vecs:
-                arr = _np.asarray(v, dtype=_np.float32)
-                n = float(_np.linalg.norm(arr)) or 1.0
-                blobs.append((arr / n).astype(_np.float32, copy=False).tobytes())
+                arr = _np_local.asarray(v, dtype=_np_local.float32)
+                n = float(_np_local.linalg.norm(arr)) or 1.0
+                blobs.append((arr / n).astype(_np_local.float32, copy=False).tobytes())
         except Exception as e:
             _log_exc("backfill encode", e); return 0
         with db() as c:
@@ -273,14 +284,15 @@ def get_ltm_relevant(uid, text, limit=8):
                 ranked.append((blended, r))
                 chosen_ids.add(r["id"])
 
-        # 2) Keyword fallback
+        # 2) Keyword fallback with word-boundary matching
         from main import _kw_count as _main_kw_count
+        # Extract keywords from query (simple tokenization for fallback)
+        query_keywords = [w for w in tl.split() if len(w) > 2]
+        
         for r in rows_d:
             if r["id"] in chosen_ids: continue
-            # Use word-boundary matching from main._kw_count instead of naive re.findall
-            fact_words = set(r["fact"].lower().split())
-            query_words = set(tl.split())
-            overlap = len(fact_words & query_words)
+            # Use word-boundary matching from main._kw_count
+            overlap = _main_kw_count(query_keywords, r["fact"].lower())
             sc = float(r["importance"]) + overlap * 0.08
             if r["emotion_tag"] == ue and ue != "neutral": sc += 0.15
             ranked.append((sc * 0.5, r))
