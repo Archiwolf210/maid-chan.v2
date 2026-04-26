@@ -373,7 +373,8 @@ async def _scan_once() -> None:
 
         try:
             state = load_state(uid)
-        except Exception:
+        except Exception as e:
+            log.debug("proactive scan uid=%s failed to load state: %s", uid, e)
             continue
         last_act = int(state.get("last_activity_ts") or 0)
         uname = (get_user(uid) or {}).get("name", "хозяин")
@@ -581,7 +582,7 @@ async def _write_diary(uid: str, day: str) -> Optional[str]:
             rows = c.execute(
                 "SELECT role, content FROM memory "
                 "WHERE user_id=? AND turn_status='completed' "
-                "AND ts>=? AND ts<? ORDER BY id ASC LIMIT 180",
+                "AND ts>=? AND ts<? ORDER BY id ASC LIMIT 100",
                 (uid, start_ts, end_ts)).fetchall()
     except Exception as e:
         _log_exc("_write_diary fetch", e); return None

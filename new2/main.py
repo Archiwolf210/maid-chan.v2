@@ -17,9 +17,6 @@ v9.0: RTX 3090 24GB + Qwen3-32B Q4_K_M + Qwen3-0.6B draft (speculative decoding)
       --cont-batching, --parallel 2.
 """
 from __future__ import annotations
-# v9.5: pruned unused imports — sqlite3 (replaced by app.db),
-# contextmanager (db ctx moved out), timedelta (no users), AsyncGenerator
-# (no annotated SSE generator).
 import asyncio, json, logging, os, random, re, secrets, socket, sys, threading, time, traceback
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -42,6 +39,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+
+# Import utilities from isolated module to break circular dependencies
+from app.utils.patterns import _kw_count, _kw_any, _detect_emotion
 
 VERSION = "9.1"
 
@@ -88,27 +88,16 @@ def _clamp(v: float, lo: float, hi: float) -> float:
 # the opposite), "злой" inside "незлой", "счастлив" inside "несчастлив", etc.
 # Using (?:^|\W) ... (?:\W|$) catches Cyrillic boundaries correctly because
 # Python's \W is Unicode-aware and treats 'не' + word-char as a continuation.
-_KW_CACHE: dict = {}
+# NOTE: Functions moved to app/utils/patterns.py. These are deprecated aliases.
 def _kw_any(kws: tuple, text: str) -> bool:
-    """Return True if any keyword appears as a whole token in text."""
-    key = kws if isinstance(kws, tuple) else tuple(kws)
-    pat = _KW_CACHE.get(key)
-    if pat is None:
-        pat = re.compile(r"(?:^|\W)(?:" + "|".join(re.escape(k) for k in key) + r")(?:\W|$)")
-        _KW_CACHE[key] = pat
-    return bool(pat.search(text))
+    """Deprecated. Use app.utils.patterns._kw_any instead."""
+    from app.utils.patterns import _kw_any as real_fn
+    return real_fn(list(kws) if isinstance(kws, tuple) else kws, text)
 
 def _kw_count(kws, text: str) -> int:
-    """Count how many keywords from `kws` appear as whole tokens in text
-    (each keyword contributes at most once — matches the legacy semantics)."""
-    key = tuple(kws)
-    pat = _KW_CACHE.get(key)
-    if pat is None:
-        pat = re.compile(r"(?:^|\W)(?:" + "|".join(re.escape(k) for k in key) + r")(?:\W|$)")
-        _KW_CACHE[key] = pat
-    # Legacy: sum(1 for w in kws if w in text) — each kw counts once even if
-    # repeated. Replicate that: iterate kws and check each with boundary match.
-    return sum(1 for w in key if re.search(r"(?:^|\W)" + re.escape(w) + r"(?:\W|$)", text))
+    """Deprecated. Use app.utils.patterns._kw_count instead."""
+    from app.utils.patterns import _kw_count as real_fn
+    return real_fn(kws, text)
 
 def _read_json(p: str):
     with open(p, "r", encoding="utf-8") as f:
@@ -644,36 +633,49 @@ def _evolve_goals(s):
 # ── COGNITIVE LAYER ───────────────────────────────────────────────────────────
 @dataclass
 class CognitiveFrame:
-    intent: str; response_mode: str; topics: list
-    sentiment: float; emotion_tag: str; emotion_valence: float; intensity: float
-    meaning: str; interpretation: str; maid_emotion: str; maid_intention: str
+    intent: str
+    response_mode: str
+    topics: list
+    sentiment: float
+    emotion_tag: str
+    emotion_valence: float
+    intensity: float
+    meaning: str
+    interpretation: str
+    maid_emotion: str
+    maid_intention: str
 
 _TMAP = {
-    "music":["музыку","музыка","песня","петь","мелодия"],"food":["еда","кофе","чай","ужин","обед","завтрак","голоден"],
-    "feelings":["чувству","эмоц","грустно","весело","тяжело","переживаю"],"work":["работа","учёба","задача","проект","занят"],
-    "sleep":["спать","сон","усталый","ночь","отдых"],"future":["мечта","план","будущее","однажды"],
-    "past":["помнишь","раньше","было","случилось","история"],"self":["ты","мэйд","горничная","чувствуешь","думаешь"],
-    "ai":["ии","робот","программа","нейросеть","искусственный","алгоритм"],
-    "tasks":["задача","список","напомни","запомни","сделать","дела"],"notes":["запиши","заметка","сохрани"],
+    "music": ["музыку", "музыка", "песня", "петь", "мелодия"],
+    "food": ["еда", "кофе", "чай", "ужин", "обед", "завтрак", "голоден"],
+    "feelings": ["чувству", "эмоц", "грустно", "весело", "тяжело", "переживаю"],
+    "work": ["работа", "учёба", "задача", "проект", "занят"],
+    "sleep": ["спать", "сон", "усталый", "ночь", "отдых"],
+    "future": ["мечта", "план", "будущее", "однажды"],
+    "past": ["помнишь", "раньше", "было", "случилось", "история"],
+    "self": ["ты", "мэйд", "горничная", "чувствуешь", "думаешь"],
+    "ai": ["ии", "робот", "программа", "нейросеть", "искусственный", "алгоритм"],
+    "tasks": ["задача", "список", "напомни", "запомни", "сделать", "дела"],
+    "notes": ["запиши", "заметка", "сохрани"],
 }
 
 _IRULES = [
-    ("greeting",["привет","здравствуй","хай","доброе","добрый вечер","доброй ночи","добрый день"]),
-    ("compliment",["красивая","милая","умница","нравишься","обожаю","восхищаюсь","люблю тебя"]),
-    ("complaint",["плохо","злой","ошиблась","надоела","разочарован","глупая","тупая"]),
-    ("flirt",["поцелуй","обними","хочу тебя","желание","флирт","близко","страсть"]),
-    ("philosophical",["зачем","смысл","почему","задумался","философ","правда жизни","существован"]),
-    ("command",["принеси","сделай","приготовь","убери","подай","налей","помоги мне","выполни"]),
-    ("nsfw",["раздень","секс","постель","эрот","возбужда","страстно"]),
-    ("emotional",["грустно","тяжело","плачу","боюсь","устал","одинок","тоскую","переживаю"]),
+    ("greeting", ["привет", "здравствуй", "хай", "доброе", "добрый вечер", "доброй ночи", "добрый день"]),
+    ("compliment", ["красивая", "милая", "умница", "нравишься", "обожаю", "восхищаюсь", "люблю тебя"]),
+    ("complaint", ["плохо", "злой", "ошиблась", "надоела", "разочарован", "глупая", "тупая"]),
+    ("flirt", ["поцелуй", "обними", "хочу тебя", "желание", "флирт", "близко", "страсть"]),
+    ("philosophical", ["зачем", "смысл", "почему", "задумался", "философ", "правда жизни", "существован"]),
+    ("command", ["принеси", "сделай", "приготовь", "убери", "подай", "налей", "помоги мне", "выполни"]),
+    ("nsfw", ["раздень", "секс", "постель", "эрот", "возбужда", "страстно"]),
+    ("emotional", ["грустно", "тяжело", "плачу", "боюсь", "устал", "одинок", "тоскую", "переживаю"]),
 ]
 
 _MRULES = [
-    ("listen",["просто выслушай","не нужен совет","хочу выговориться","не давай советов"]),
-    ("support",["поддержи меня","мне плохо","мне тяжело","побудь рядом"]),
-    ("advice",["посоветуй","что делать","как лучше","твой совет","как поступить"]),
-    ("plan",["нужен план","помоги спланировать","составь план","по шагам"]),
-    ("task_help",["помоги с задачей","помоги разобраться","помоги по проекту"]),
+    ("listen", ["просто выслушай", "не нужен совет", "хочу выговориться", "не давай советов"]),
+    ("support", ["поддержи меня", "мне плохо", "мне тяжело", "побудь рядом"]),
+    ("advice", ["посоветуй", "что делать", "как лучше", "твой совет", "как поступить"]),
+    ("plan", ["нужен план", "помоги спланировать", "составь план", "по шагам"]),
+    ("task_help", ["помоги с задачей", "помоги разобраться", "помоги по проекту"]),
 ]
 
 _MPROMPT = {
@@ -689,23 +691,18 @@ _MPROMPT = {
 }
 
 def _detect_emotion(text):
-    t=text.lower()
-    patterns={"joy":(("радость","счастье","весело","отлично","замечательно","ура"),+1.0),
-              "sadness":(("грустно","плачу","тяжело","тоскую","одинок","пусто"),-1.0),
-              "fear":(("боюсь","страшно","тревожно","паника","беспокоюсь"),-0.7),
-              "anger":(("злой","ненавижу","бесит","раздражает","возмущён"),-0.9),
-              "surprise":(("неожиданно","вдруг","удивительно"),+0.2),
-              "trust":(("верю","доверяю","честно","надёжный"),+0.6),
-              "anticipation":(("жду","скоро","мечтаю","предвкушаю"),+0.5)}
-    scores={"neutral":0.0}
-    for tag,(words,val) in patterns.items():
-        # v9.0: word-boundary match — "несчастье"/"нестрашно"/"незлой" no longer
-        # trigger joy/fear/anger through substring bleed.
-        hits=_kw_count(words,t)
-        if hits>0: scores[tag]=hits*abs(val)
-    best=max(scores,key=lambda k:scores[k])
-    valence=0.0 if best=="neutral" else patterns[best][1]*min(scores[best],1.0)
-    return best,valence
+    """Deprecated. Use app.utils.patterns._detect_emotion instead."""
+    from app.utils.patterns import _detect_emotion as real_fn
+    result = real_fn(text)
+    # Backward compatibility: return (tag, valence) tuple
+    if result is None:
+        return "neutral", 0.0
+    # Map simple tags to legacy format
+    tag_map = {"positive": ("joy", 1.0), "negative": ("sadness", -1.0)}
+    if result in tag_map:
+        tag, val = tag_map[result]
+        return tag, val
+    return "neutral", 0.0
 
 def build_cognitive_frame(uid,text,state,cfg):
     tl=text.lower(); nsfw=cfg.get("nsfw_mode",False)
@@ -722,8 +719,6 @@ def build_cognitive_frame(uid,text,state,cfg):
     etag,ev=_detect_emotion(text); intensity=min(abs(ev)+0.1*len(text)/100,1.0)
     _mtext={"greeting":f"{uname} пришёл поздороваться","question":f"{uname} задаёт вопрос","command":f"{uname} просит о чём-то конкретном","flirt":f"{uname} флиртует","compliment":f"{uname} делает комплимент","complaint":f"{uname} чем-то недоволен","philosophical":f"{uname} хочет поразмышлять","emotional":f"{uname} переживает и ищет поддержки","nsfw":f"{uname} хочет большей близости","other":f"{uname} говорит -- нужно ответить"}
     meaning=_mtext.get(intent,_mtext["other"])
-    # v9.5: `mood` was previously unpacked here but never read in this scope
-    # (interp branches use only fear+att). Pulled out to silence pyflakes.
     fear=state["fear"]; att=state["attachment"]
     if intent=="complaint": interp="Задело... что я сделала?" if fear>0.6 else "Критика. Приму с достоинством."
     elif intent=="compliment": interp="Согревает -- он замечает меня." if att>0.5 else "Комплимент... смущает, но приятен."
@@ -960,7 +955,6 @@ def get_action(user_text,reply,state,cfg,cog):
 
 # ── THOUGHTS ──────────────────────────────────────────────────────────────────
 def compute_thoughts(uid,text,state,cog):
-    # v9.5: `trust` was unpacked but never used in this function body.
     mood=state["mood"]; fear=state["fear"]; att=state["attachment"]
     # v9.1: dual-counter semantics for thoughts.
     #   `session` (msg_count) drives "first word of session" — each new session
@@ -1515,7 +1509,10 @@ async def _spawn_post_chat_async(uid, user_text, reply, cog, user_msg_id,
                                  total_msg_count):
     """Wrapper coroutine: runs the sync evolution pass off-loop, then
     schedules an LLM letter composer if any high-intensity anchor fired,
-    then unseals letters if humanity climbed past the threshold."""
+    then unseals letters if humanity climbed past the threshold.
+    
+    v10.0: Also triggers diary hooks for real-time diary writing decisions.
+    """
     loop = asyncio.get_running_loop()
     exe = _get_executor()
     try:
@@ -1525,6 +1522,7 @@ async def _spawn_post_chat_async(uid, user_text, reply, cog, user_msg_id,
             prev_rp_mode, new_rp_mode, total_msg_count)
     except Exception as e:
         _log_exc("evolution pass scheduler", e); anchored_ids = []
+    
     # Letter for strongest anchor
     if anchored_ids:
         try:
@@ -1533,6 +1531,7 @@ async def _spawn_post_chat_async(uid, user_text, reply, cog, user_msg_id,
             _track(asyncio.create_task(compose_letter_for_anchor(uid, top)))
         except Exception as e:
             _log_exc("schedule letter composer", e)
+    
     # Unseal sealed letters if humanity has risen past the gate
     try:
         from app.services.letters import unseal_below_threshold
@@ -1541,6 +1540,29 @@ async def _spawn_post_chat_async(uid, user_text, reply, cog, user_msg_id,
                                    float((s or {}).get("humanity_level", 0.0)))
     except Exception as e:
         _log_exc("unseal letters", e)
+    
+    # v10.1: Trigger diary hook via safe manager (isolated, timeout-protected)
+    if anchored_ids:
+        try:
+            from app.services.hooks_manager import trigger_diary_hook
+            today = datetime.now().strftime("%Y-%m-%d")
+            # Quick check if diary already exists
+            with db() as c:
+                existing = c.execute(
+                    "SELECT id FROM diary_entries WHERE user_id=? AND day=?",
+                    (uid, today)
+                ).fetchone()
+            
+            if not existing:
+                from app.services.key_memories import get_recent_key_memories
+                kms = get_recent_key_memories(uid, limit=10)
+                # Fire-and-forget with safe manager (no await, task tracked)
+                _track(trigger_diary_hook(uid, today, anchored_ids, kms))
+        except Exception as e:
+            _log_exc("diary hook trigger", e)
+
+
+# REMOVED: _trigger_diary_hook and _call_diary_hook moved to app/services/hooks_manager.py
 
 # ── FASTAPI ───────────────────────────────────────────────────────────────────
 async def _periodic_ltm_backfill():

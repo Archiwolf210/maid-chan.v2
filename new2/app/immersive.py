@@ -260,7 +260,7 @@ def _build_immersive_prompt(uname: str, mode: str, last_exchange: str,
 def _commit_live_scene(uid: str, parsed: dict, mode: str) -> int:
     """Atomically writes the parsed scene to cache + rp_scene table.
     Returns the new generation_id (etag for polling). Thread-safe."""
-    from main import load_rp_scene, save_rp_scene
+    from app.memory import load_rp_scene, save_rp_scene
     gen_id = 0
     with _LIVE_SCENE_LOCK:
         gen_id = _LIVE_SCENE_GEN_COUNTER.get(uid, 0) + 1

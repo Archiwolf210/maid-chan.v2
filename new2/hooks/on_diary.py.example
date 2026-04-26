@@ -1,0 +1,14 @@
+# Placeholder hook: on_diary
+# Rename to on_diary.py to enable
+
+def on_diary(uid: str, entry: str, metadata: dict) -> None:
+    """Called after Maid writes a diary entry.
+    
+    Example: Send notification, backup to cloud, analyze sentiment.
+    
+    Args:
+        uid: User ID
+        entry: Diary text
+        metadata: Dict with humanity_level, voice_band, trigger_reason
+    """
+    pass  # Implement your logic here

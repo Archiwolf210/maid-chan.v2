@@ -20,7 +20,9 @@
     "embedding_enabled": true,
     "embedding_model": "intfloat/multilingual-e5-large",
     "embedding_threads": 8,
-    "note": "v9: short_term_limit 50 and compress_every 80 leverage 32k ctx of Qwen3-32B. embedding_threads=8 uses Xeon's physical cores."
+    "recency_bias_coefficient": 0.15,
+    "recency_decay_hours": 24,
+    "note": "v9: short_term_limit 50 and compress_every 80 leverage 32k ctx of Qwen3-32B. embedding_threads=8 uses Xeon's physical cores. v10: recency_bias adds temporal priority to hybrid retrieval."
   },
   "inference": {
     "active_profile": "daily",
