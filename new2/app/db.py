@@ -24,14 +24,6 @@ from contextlib import contextmanager
 from app.utils.logging import _log as _log_util, _log_exc as _log_exc_util
 
 
-def _log():
-    return _log_util
-
-
-def _log_exc(msg, exc):
-    _log_exc_util(msg, exc)
-
-
 def _base_dir() -> str:
     from main import BASE_DIR
     return BASE_DIR
