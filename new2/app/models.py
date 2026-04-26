@@ -56,7 +56,7 @@ class KeyMemory(BaseModel):
 
 
 # Closed enum kept as a tuple to stay JSON-friendly in traits_json blobs.
-EVENT_TYPES: tuple = (
+EVENT_TYPES: tuple[str, ...] = (
     "breakthrough",   # high-importance reflective moment, fresh self-insight
     "tender",         # warm/affectionate exchange, low intensity, high warmth
     "rupture",        # strong negative valence, conflict, hurt

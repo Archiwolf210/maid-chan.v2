@@ -255,7 +255,7 @@ def get_ltm_relevant(uid, text, limit=8):
         with db() as c:
             rows = c.execute(
                 "SELECT id,fact,category,importance,emotion_tag,access_count,embedding "
-                "FROM long_term_memory WHERE user_id=? ORDER BY importance DESC",
+                "FROM long_term_memory WHERE user_id=? ORDER BY importance DESC LIMIT 50",
                 (uid,)).fetchall()
         if not rows: return []
         rows_d = [dict(r) for r in rows]
@@ -274,9 +274,14 @@ def get_ltm_relevant(uid, text, limit=8):
                 chosen_ids.add(r["id"])
 
         # 2) Keyword fallback
+        from main import _kw_count as _main_kw_count
         for r in rows_d:
             if r["id"] in chosen_ids: continue
-            sc = float(r["importance"]) + len(set(re.findall(r"\w+", r["fact"].lower())) & set(re.findall(r"\w+", tl))) * 0.08
+            # Use word-boundary matching from main._kw_count instead of naive re.findall
+            fact_words = set(r["fact"].lower().split())
+            query_words = set(tl.split())
+            overlap = len(fact_words & query_words)
+            sc = float(r["importance"]) + overlap * 0.08
             if r["emotion_tag"] == ue and ue != "neutral": sc += 0.15
             ranked.append((sc * 0.5, r))
 
