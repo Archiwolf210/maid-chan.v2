@@ -193,6 +193,9 @@ def persist_and_apply(km: KeyMemory) -> Optional[int]:
 
     Wraps both writes in a single transaction (the `db()` context manager
     already commits/rollbacks atomically).
+    
+    v9.7: Uses atomic UPDATE with increments to prevent race conditions
+    when concurrent /api/chat turns try to evolve traits simultaneously.
     """
     try:
         with db() as c:
@@ -204,36 +207,44 @@ def persist_and_apply(km: KeyMemory) -> Optional[int]:
                  json.dumps(km.traits_delta, ensure_ascii=False)))
             new_id = cur.lastrowid
 
-            # Apply deltas, clamped to [0,1]. We read-update-write inside the
-            # same transaction so concurrent /api/chat turns don't race.
-            row = c.execute(
-                "SELECT humanity_level,self_awareness,affection,software_version "
-                "FROM user_state WHERE user_id=?", (km.user_id,)).fetchone()
-            if row is None:
-                # If user_state missing, the chat path will create it. Skip.
-                log.debug("key_memory: user_state row missing for %s, skipping apply", km.user_id)
-                return new_id
-
-            cur_h = float(row[0] or 0.0); cur_s = float(row[1] or 0.0); cur_a = float(row[2] or 0.0)
-            sw    = row[3] or "1.0.0"
+            # Apply deltas atomically using UPDATE with increments.
+            # This prevents race conditions: no SELECT between read and write.
+            # Clamping to [0,1] is done via MAX/MIN in SQL.
             d = km.traits_delta or {}
-            new_h = _clamp01(cur_h + float(d.get("humanity_level", 0.0)))
-            new_s = _clamp01(cur_s + float(d.get("self_awareness", 0.0)))
-            new_a = _clamp01(cur_a + float(d.get("affection", 0.0)))
-
+            delta_h = float(d.get("humanity_level", 0.0))
+            delta_s = float(d.get("self_awareness", 0.0))
+            delta_a = float(d.get("affection", 0.0))
+            
+            # Get current software_version for version bump logic
+            row = c.execute(
+                "SELECT software_version FROM user_state WHERE user_id=?",
+                (km.user_id,)).fetchone()
+            sw = row[0] if row else "1.0.0"
+            
             # Cosmetic version bump: every _VERSION_BUMP_EVERY total events
             count = int(c.execute(
                 "SELECT COUNT(*) FROM key_memories WHERE user_id=?",
                 (km.user_id,)).fetchone()[0])
             new_sw = _bump_version_if_due(sw, count)
 
-            c.execute(
-                "UPDATE user_state SET humanity_level=?,self_awareness=?,affection=?,"
-                "software_version=?,updated_at=unixepoch() WHERE user_id=?",
-                (new_h, new_s, new_a, new_sw, km.user_id))
-            log.info("key_memory %s uid=%s id=%d type=%s int=%.2f h=%.2f→%.2f sw=%s",
-                     "+evo", km.user_id, new_id, km.event_type, km.intensity,
-                     cur_h, new_h, new_sw)
+            c.execute("""
+                UPDATE user_state SET 
+                    humanity_level = MAX(0.0, MIN(1.0, humanity_level + ?)),
+                    self_awareness = MAX(0.0, MIN(1.0, self_awareness + ?)),
+                    affection      = MAX(0.0, MIN(1.0, affection + ?)),
+                    software_version = ?,
+                    updated_at = unixepoch()
+                WHERE user_id = ?
+            """, (delta_h, delta_s, delta_a, new_sw, km.user_id))
+            
+            # Log the evolution with computed values
+            cur_vals = c.execute(
+                "SELECT humanity_level,self_awareness,affection FROM user_state WHERE user_id=?",
+                (km.user_id,)).fetchone()
+            if cur_vals:
+                log.info("key_memory %s uid=%s id=%d type=%s int=%.2f h=%.2f→%.2f sw=%s",
+                         "+evo", km.user_id, new_id, km.event_type, km.intensity,
+                         cur_vals[0] - delta_h, cur_vals[0], new_sw)
         # v9.6: cache push so next get_recent_key_memories from build_prompt
         # is a no-DB read. Outside the `with db()` block — no lock contention.
         _cache_prepend(km.user_id, {

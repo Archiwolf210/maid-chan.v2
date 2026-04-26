@@ -362,15 +362,10 @@ async def _scan_once() -> None:
 
     for u in users:
         uid = u["id"]
-        # Queue limit (independent of kind cooldowns). We check len under lock
-        # to avoid a race where two ticks both pass the cap check then both
-        # append. The deque's own `maxlen` is the final hard guard.
-        with _PROACTIVE_LOCK:
-            q = _PROACTIVE_QUEUE.get(uid)
-            cur_len = len(q) if q else 0
-        if cur_len >= max_queue:
-            continue
-
+        # P3 FIX: Queue limit check moved INSIDE the lock to prevent race
+        # condition where two ticks both pass the cap check then both append.
+        # We now check length and append atomically under the same lock.
+        
         try:
             state = load_state(uid)
         except Exception:
@@ -408,10 +403,14 @@ async def _scan_once() -> None:
         if not candidate:
             continue
 
-        # Lock-protected commit of all three writes so an interleaved reader
-        # never sees the queue updated but the cooldown stamps stale.
+        # P3 FIX: Lock-protected check+append to prevent queue overflow.
+        # The length check and append are now atomic under the same lock.
         with _PROACTIVE_LOCK:
             q = _PROACTIVE_QUEUE.get(uid)
+            cur_len = len(q) if q else 0
+            if cur_len >= max_queue:
+                # Queue full — skip this candidate silently
+                continue
             if q is None:
                 maxlen = int(_cfg().get("proactive_max_queue", 3))
                 q = deque(maxlen=max(1, maxlen))
