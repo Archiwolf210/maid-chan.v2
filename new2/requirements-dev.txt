@@ -1,0 +1,5 @@
+# Development dependencies — NOT pulled by `python install.py`.
+# Install manually with: pip install -r requirements-dev.txt
+# These are needed only when running `pytest tests/` locally.
+
+pytest>=8.0,<10.0
