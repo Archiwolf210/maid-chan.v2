@@ -281,3 +281,72 @@ async def server_status():
             "remote_mode": cfg.get("server", {}).get("remote_mode", "local_trusted")
         }
     }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  NSFW MODE ENDPOINTS
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.get("/api/users/{uid}/nsfw/status")
+async def get_nsfw_status_endpoint(uid: str):
+    """Get NSFW mode status for a user."""
+    from app.services.nsfw import get_nsfw_status as get_status
+    status = get_status(uid)
+    return status
+
+
+@router.post("/api/users/{uid}/nsfw/activate")
+async def activate_nsfw(uid: str, request: Request):
+    """Activate NSFW mode (requires explicit consent)."""
+    from app.services.nsfw import activate_nsfw_mode
+    try:
+        payload = await request.json()
+    except:
+        payload = {}
+    
+    explicit_consent = payload.get("explicit_consent", True)
+    success, message = activate_nsfw_mode(uid, explicit_consent)
+    
+    if success:
+        return {"status": "ok", "message": message}
+    else:
+        raise HTTPException(status_code=400, detail=message)
+
+
+@router.post("/api/users/{uid}/nsfw/deactivate")
+async def deactivate_nsfw(uid: str):
+    """Deactivate NSFW mode."""
+    from app.services.nsfw import deactivate_nsfw_mode
+    success, message = deactivate_nsfw_mode(uid)
+    
+    if success:
+        return {"status": "ok", "message": message}
+    else:
+        raise HTTPException(status_code=400, detail=message)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  DEEP REFLECTION ENDPOINTS
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.get("/api/users/{uid}/reflection/status")
+async def get_reflection_status_endpoint(uid: str):
+    """Get deep reflection status for a user."""
+    from app.services.reflection import get_reflection_status
+    status = get_reflection_status(uid)
+    return status
+
+
+@router.post("/api/users/{uid}/reflection/trigger")
+async def trigger_deep_reflection(uid: str):
+    """Trigger a deep reflection session manually."""
+    from app.services.reflection import perform_deep_reflection
+    result = await perform_deep_reflection(uid)
+    
+    if result is None:
+        raise HTTPException(status_code=500, detail="Reflection failed")
+    
+    if result.get("status") == "error":
+        raise HTTPException(status_code=400, detail=result.get("reason", "Unknown error"))
+    
+    return {"status": "ok", **result}
