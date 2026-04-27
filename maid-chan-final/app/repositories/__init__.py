@@ -373,6 +373,44 @@ class DiaryRepository:
             return row is not None
 
 
+class PendingTopicsRepository:
+    """Repository for pending_topics table operations."""
+    
+    @staticmethod
+    def get_open_topics(uid: str, limit: int = 5) -> List[Dict[str, Any]]:
+        """Get open topics for proactive check-ins."""
+        with db() as c:
+            rows = c.execute("""
+                SELECT id, topic, context, importance, created_at, expires_at
+                FROM pending_topics
+                WHERE user_id=? AND status='open' AND expires_at > unixepoch()
+                ORDER BY importance DESC, created_at DESC
+                LIMIT ?
+            """, (uid, limit)).fetchall()
+            return [dict(row) for row in rows]
+    
+    @staticmethod
+    def add_topic(uid: str, topic: str, context: str = "", 
+                  importance: float = 0.6, expires_in_sec: int = 259200) -> int:
+        """Add a pending topic."""
+        with db() as c:
+            c.execute("""
+                INSERT INTO pending_topics (user_id, topic, context, importance, expires_at)
+                VALUES (?, ?, ?, ?, unixepoch() + ?)
+            """, (uid, topic[:300], context[:500], importance, expires_in_sec))
+            return c.lastrowid
+    
+    @staticmethod
+    def close_topic(topic_id: int) -> bool:
+        """Mark topic as closed."""
+        with db() as c:
+            cur = c.execute(
+                "UPDATE pending_topics SET status='closed' WHERE id=?",
+                (topic_id,)
+            )
+            return cur.rowcount > 0
+
+
 # Convenience functions for backward compatibility
 def load_state(uid: str) -> Optional[Dict[str, Any]]:
     """Legacy wrapper for UserStateRepository.get()"""
@@ -427,3 +465,8 @@ def get_diary(uid: str) -> Optional[Dict[str, Any]]:
 def add_diary_entry(uid: str, content: str, metadata: Dict) -> int:
     """Legacy wrapper for DiaryRepository.add()"""
     return DiaryRepository.add(uid, content, metadata=metadata)
+
+
+def get_open_topics(uid: str, limit: int = 5) -> List[Dict[str, Any]]:
+    """Legacy wrapper for PendingTopicsRepository.get_open_topics()"""
+    return PendingTopicsRepository.get_open_topics(uid, limit)

@@ -147,6 +147,104 @@ async def get_key_memories(uid: str, limit: int = 10):
     return {"memories": memories, "count": len(memories)}
 
 
+@router.get("/api/users/{uid}/diary/entries")
+async def get_diary_entries(uid: str, limit: int = 30):
+    """Get list of diary entries (newest first)."""
+    from app.repositories.diary import DiaryRepository
+    entries = DiaryRepository.list_days(uid, limit)
+    return {"entries": entries, "count": len(entries)}
+
+
+@router.get("/api/users/{uid}/diary/{day}")
+async def get_diary_entry(uid: str, day: str):
+    """Get specific diary entry by day (YYYY-MM-DD)."""
+    from app.repositories.diary import DiaryRepository
+    entry = DiaryRepository.get_entry(uid, day)
+    if not entry:
+        raise HTTPException(status_code=404, detail="entry not found")
+    return entry
+
+
+@router.get("/api/users/{uid}/goals")
+async def get_tactical_goals(uid: str):
+    """Get active tactical goals."""
+    from app.repositories.tactical_goals import TacticalGoalsRepository
+    goals = TacticalGoalsRepository.list_active(uid)
+    return {"goals": goals, "count": len(goals)}
+
+
+@router.post("/api/users/{uid}/goals")
+async def create_tactical_goal(uid: str, request: Request):
+    """Create a new tactical goal (admin/debug)."""
+    from app.repositories.tactical_goals import TacticalGoalsRepository
+    try:
+        payload = await request.json()
+        horizon = payload.get("horizon", "day")
+        text = payload.get("text", "")
+        reasoning = payload.get("reasoning", "")
+        
+        if not text:
+            raise HTTPException(status_code=400, detail="text required")
+        
+        goal_id = TacticalGoalsRepository.create_goal(uid, horizon, text, reasoning)
+        if not goal_id:
+            raise HTTPException(status_code=400, detail="invalid horizon")
+        
+        return {"status": "ok", "goal_id": goal_id}
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="invalid JSON")
+
+
+@router.post("/api/users/{uid}/goals/{goal_id}/complete")
+async def complete_goal(uid: str, goal_id: int):
+    """Mark a goal as completed."""
+    from app.repositories.tactical_goals import TacticalGoalsRepository
+    success = TacticalGoalsRepository.mark_done(uid, goal_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="goal not found or not active")
+    return {"status": "ok"}
+
+
+@router.get("/api/users/{uid}/letters")
+async def get_letters(uid: str, limit: int = 20, include_sealed: bool = False):
+    """Get recent letters from Maid."""
+    from app.repositories.letters import LettersRepository
+    letters = LettersRepository.list_recent(uid, limit, include_sealed)
+    return {"letters": letters, "count": len(letters)}
+
+
+@router.get("/api/users/{uid}/letters/{letter_id}")
+async def get_letter(uid: str, letter_id: int):
+    """Get specific letter."""
+    from app.repositories.letters import LettersRepository
+    letter = LettersRepository.get_letter(uid, letter_id)
+    if not letter:
+        raise HTTPException(status_code=404, detail="letter not found")
+    
+    # Mark as seen if not already
+    if letter.get("seen_at") is None:
+        LettersRepository.mark_seen(uid, letter_id)
+        letter["seen_at"] = int(time.time())
+    
+    return letter
+
+
+@router.post("/api/users/{uid}/letters/{letter_id}/seen")
+async def mark_letter_seen(uid: str, letter_id: int):
+    """Mark letter as seen."""
+    from app.repositories.letters import LettersRepository
+    success = LettersRepository.mark_seen(uid, letter_id)
+    return {"status": "ok", "marked": success}
+
+
+@router.get("/api/users/{uid}/proactive")
+async def get_proactive_messages(uid: str, consume: bool = True):
+    """Get queued proactive messages (if any)."""
+    from app.services.autonomous import get_proactive_pending
+    items = get_proactive_pending(uid, consume)
+    return {"messages": items, "count": len(items)}
+
+
 @router.get("/api/users/{uid}/evolution")
 async def get_evolution_timeline(uid: str, limit: int = 200):
     """Get personality evolution timeline for charting."""

@@ -230,6 +230,17 @@ def persist_and_apply(km: KeyMemory, connection: Optional[Any] = None) -> Option
                  "+evo", km.user_id, new_id, km.event_type, km.intensity,
                  cur_h, new_h, new_sw)
             
+            # Trigger letter generation for significant events (intensity >= 0.75)
+            if new_id and km.intensity >= 0.75:
+                try:
+                    from app.services.letters import try_generate_letter
+                    import asyncio
+                    asyncio.create_task(try_generate_letter(km.user_id, new_id))
+                except ImportError:
+                    pass  # Letters service not available yet
+                except Exception as e:
+                    _log_exc("letter generation trigger", e)
+            
             # Commit if we own the transaction
             if _should_close:
                 c.commit()

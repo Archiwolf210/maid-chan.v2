@@ -111,8 +111,7 @@ async def _generate_proactive_text(uname: str, topic: str, ctx: str, gap_hours: 
 
 async def _scan_once() -> None:
     """One pass of proactive scanner."""
-    from app.repositories import UserStateRepository, MemoryRepository
-    from app.repositories.__init__ import get_open_topics
+    from app.repositories import UserStateRepository, MemoryRepository, PendingTopicsRepository
     
     cfg = _cfg()
     if not cfg.get("proactive_enabled", True):
@@ -156,7 +155,7 @@ async def _scan_once() -> None:
         
         # Get open topics
         try:
-            topics = get_open_topics(uid, 5)
+            topics = PendingTopicsRepository.get_open_topics(uid, 5)
         except:
             continue
         
