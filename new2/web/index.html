@@ -694,7 +694,7 @@ body{
 .toggle-pill.on::after{transform:translateX(16px);box-shadow:0 1px 6px rgba(232,164,184,.6)}
 .toggle-pill:hover::after{box-shadow:0 1px 8px rgba(232,164,184,.55)}
 
-/* toast */
+/* toast — legacy, replaced by warm notifications */
 .toast-container{
   position:fixed;bottom:20px;right:20px;
   display:flex;flex-direction:column;gap:6px;
@@ -711,6 +711,68 @@ body{
 .toast.err{border-color:var(--red-s);color:var(--red-s)}
 .toast.ok{border-color:var(--green-s);color:var(--green-s)}
 @keyframes toast-in{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:none}}
+
+/* ── v9.7: WARM NOTIFICATIONS (sakura-style) ─────────────────────────── */
+.warm-notif-container{
+  position:fixed;top:80px;right:20px;
+  display:flex;flex-direction:column;gap:10px;
+  z-index:500;pointer-events:none;
+}
+.warm-notif{
+  min-width:280px;max-width:360px;
+  padding:14px 18px;border-radius:14px;
+  background:linear-gradient(135deg,var(--s2),var(--s3));
+  border:1px solid var(--border-lit);
+  border-left:4px solid var(--sakura);
+  color:var(--ink-dim);font-size:.85em;line-height:1.5;
+  box-shadow:0 12px 40px rgba(0,0,0,.5), 0 0 20px rgba(232,164,184,.1);
+  opacity:0;transform:translateX(20px) scale(.95);
+  animation:warm-in .4s cubic-bezier(.2,.8,.2,1) forwards;
+  letter-spacing:.01em;position:relative;overflow:hidden;
+  pointer-events:auto;cursor:pointer;
+}
+.warm-notif::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--sakura),transparent);
+  opacity:.6;
+}
+.warm-notif::after{
+  content:'🌸';position:absolute;top:8px;right:10px;font-size:1em;opacity:.3;
+}
+.warm-notif.err{border-left-color:var(--red-s)}
+.warm-notif.err::after{content:'⚠'}
+.warm-notif.ok{border-left-color:var(--green-s)}
+.warm-notif.ok::after{content:'✦'}
+.warm-notif.info{border-left-color:var(--blue-s)}
+.warm-notif.info::after{content:'◈'}
+.warm-notif.hiding{
+  animation:warm-out .35s cubic-bezier(.4,0,.6,1) forwards;
+}
+@keyframes warm-in{
+  from{opacity:0;transform:translateX(20px) scale(.95)}
+  to{opacity:1;transform:translateX(0) scale(1)}
+}
+@keyframes warm-out{
+  from{opacity:1;transform:translateX(0) scale(1)}
+  to{opacity:0;transform:translateX(20px) scale(.95)}
+}
+.warm-notif-title{
+  font-family:'Georgia','Times New Roman',serif;
+  font-size:.85em;font-weight:500;letter-spacing:.06em;
+  color:var(--sakura);margin-bottom:4px;text-transform:uppercase;
+}
+.warm-notif-body{color:var(--ink);font-size:.9em}
+
+/* ── v9.7: SWIPE GESTURE HINTS ───────────────────────────────────────── */
+.swipe-hint{
+  position:fixed;bottom:30px;left:50%;transform:translateX(-50%);
+  background:rgba(15,13,12,.85);backdrop-filter:blur(8px);
+  padding:8px 16px;border-radius:20px;
+  border:1px solid var(--border-lit);
+  font-size:.75em;color:var(--ink-ghost);letter-spacing:.04em;
+  z-index:400;pointer-events:none;opacity:0;transition:opacity .3s;
+}
+.swipe-hint.show{opacity:1}
 
 /* mobile sidebar overlay */
 .sidebar-overlay{
@@ -1518,6 +1580,9 @@ body.route-settings .layout > .panel-center{visibility:hidden}
   </div>
 </section>
 
+<!-- v9.7: Warm notification container + swipe hint -->
+<div class="warm-notif-container" id="warm-notifs"></div>
+<div class="swipe-hint" id="swipe-hint">Свайп влево/вправо для панелей</div>
 <div class="toast-container" id="toasts"></div>
 
 <script>
@@ -1536,16 +1601,90 @@ let SINGLE_OWNER = false;   // true = hide user switcher, force 'master'
 // cancel it on user-switch, page-unload, or explicit stop.
 let _chatAbortCtrl = null;
 
-// ── UTILS ──────────────────────────────────────────────────────────────
-function toast(msg, type='', dur=2800) {
-  const c = document.getElementById('toasts');
+// ── v9.7: SOUND EFFECTS (optional, Web Audio API) ───────────────────────
+const SoundFX = {
+  _ctx: null,
+  _enabled: false,
+  init() {
+    try {
+      this._ctx = new (window.AudioContext || window.webkitAudioContext)();
+      this._enabled = true;
+    } catch(e) { console.warn('SoundFX not available:', e); }
+  },
+  enable() { if (!this._ctx) this.init(); this._enabled = true; },
+  disable() { this._enabled = false; },
+  playTone(freq, type='sine', dur=0.15, vol=0.08) {
+    if (!this._enabled || !this._ctx) return;
+    const t = this._ctx.currentTime;
+    const osc = this._ctx.createOscillator();
+    const gain = this._ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t);
+    gain.gain.setValueAtTime(vol, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    osc.connect(gain).connect(this._ctx.destination);
+    osc.start(t);
+    osc.stop(t + dur);
+  },
+  notify() {
+    // Soft sakura chime: two gentle tones
+    this.playTone(880, 'sine', 0.2, 0.06);
+    setTimeout(() => this.playTone(1174, 'sine', 0.25, 0.05), 80);
+  },
+  success() {
+    // Warm ascending chord
+    this.playTone(659, 'sine', 0.18, 0.07);
+    setTimeout(() => this.playTone(880, 'sine', 0.22, 0.06), 60);
+  },
+  error() {
+    // Gentle descending warning
+    this.playTone(440, 'triangle', 0.2, 0.05);
+    setTimeout(() => this.playTone(330, 'triangle', 0.25, 0.05), 100);
+  },
+  click() {
+    // Subtle UI click
+    this.playTone(1200, 'sine', 0.05, 0.03);
+  }
+};
+
+// ── v9.7: WARM NOTIFICATIONS ────────────────────────────────────────────
+function warmNotify(msg, type='info', title='', dur=4000) {
+  const c = document.getElementById('warm-notifs');
   const el = document.createElement('div');
-  el.className = 'toast' + (type ? ' '+type : '');
-  el.textContent = msg;
+  el.className = 'warm-notif ' + (type || 'info');
+  
+  let html = '';
+  if (title) {
+    html += `<div class="warm-notif-title">${title}</div>`;
+  }
+  html += `<div class="warm-notif-body">${msg}</div>`;
+  el.innerHTML = html;
+  
+  el.onclick = () => hideWarm(el);
   c.appendChild(el);
-  setTimeout(() => { el.style.opacity='0'; el.style.transform='translateX(8px)'; el.style.transition='.3s'; setTimeout(()=>el.remove(),300); }, dur);
+  
+  const timer = setTimeout(() => hideWarm(el), dur);
+  el._hideTimer = timer;
+  return el;
 }
 
+function hideWarm(el) {
+  if (!el || el.classList.contains('hiding')) return;
+  clearTimeout(el._hideTimer);
+  el.classList.add('hiding');
+  setTimeout(() => el.remove(), 350);
+}
+
+// Override toast to also use warm notifications (backward compat)
+const _origToast = toast;
+function toast(msg, type='', dur=2800) {
+  // Keep legacy toast for now, but also show warm notification
+  const warmType = type === 'err' ? 'err' : (type === 'ok' ? 'ok' : 'info');
+  warmNotify(msg, warmType, '', dur);
+  _origToast(msg, type, dur);
+}
+
+// ── UTILS ──────────────────────────────────────────────────────────────
 function timeStr() {
   return new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
 }
@@ -2006,8 +2145,14 @@ async function saveConfig() {
   try {
     await apiFetch('/config','POST',cfg);
     cfgCache = cfg;
+    warmNotify('Настройки сохранены', 'ok', 'Готово', 2500);
+    SoundFX.success();
     toast('Сохранено','ok');
-  } catch(e) { toast(e.message,'err'); }
+  } catch(e) { 
+    warmNotify(e.message, 'err', 'Ошибка', 4000);
+    SoundFX.error();
+    toast(e.message,'err'); 
+  }
 }
 
 async function toggleNsfw() {
@@ -2017,6 +2162,7 @@ async function toggleNsfw() {
   const cfg = JSON.parse(JSON.stringify(cfgCache));
   cfg.nsfw_mode = newVal;
   cfgCache = cfg;
+  SoundFX.click();
   await apiFetch('/config','POST',cfg).catch(e=>toast(e.message,'err'));
 }
 
@@ -2333,6 +2479,77 @@ function _restorePanelState() {
   } catch(e) {}
 }
 
+// ── v9.7: SWIPE GESTURES FOR MOBILE ─────────────────────────────────────
+let _touchStartX = 0;
+let _touchStartY = 0;
+let _touchHandled = false;
+
+function _handleTouchStart(e) {
+  _touchStartX = e.touches[0].clientX;
+  _touchStartY = e.touches[0].clientY;
+  _touchHandled = false;
+}
+
+function _handleTouchEnd(e) {
+  if (_touchHandled) return;
+  const dx = e.changedTouches[0].clientX - _touchStartX;
+  const dy = e.changedTouches[0].clientY - _touchStartY;
+  
+  // Only horizontal swipe with minimal vertical movement
+  if (Math.abs(dx) < 80 || Math.abs(dy) > Math.abs(dx) * 0.6) return;
+  
+  _touchHandled = true;
+  const threshold = window.innerWidth * 0.15; // 15% of screen width
+  
+  if (dx > threshold) {
+    // Swipe right — open left panel
+    if (window.matchMedia && window.matchMedia('(max-width: 900px)').matches) {
+      const panel = document.getElementById('panel-left');
+      if (!panel.classList.contains('open')) {
+        toggleSidebar('left');
+        _showSwipeHint();
+      }
+    } else {
+      const layout = document.getElementById('layout');
+      if (layout.classList.contains('collapse-left')) {
+        togglePanel('left');
+        _showSwipeHint();
+      }
+    }
+  } else if (dx < -threshold) {
+    // Swipe left — open right panel or close left
+    if (window.matchMedia && window.matchMedia('(max-width: 900px)').matches) {
+      const leftPanel = document.getElementById('panel-left');
+      const rightPanel = document.getElementById('panel-right');
+      if (leftPanel.classList.contains('open')) {
+        closeSidebars();
+        _showSwipeHint();
+      } else if (!rightPanel.classList.contains('open')) {
+        toggleSidebar('right');
+        _showSwipeHint();
+      }
+    } else {
+      const layout = document.getElementById('layout');
+      if (layout.classList.contains('collapse-right')) {
+        togglePanel('right');
+        _showSwipeHint();
+      }
+    }
+  }
+}
+
+function _showSwipeHint() {
+  const hint = document.getElementById('swipe-hint');
+  if (!hint) return;
+  hint.classList.add('show');
+  setTimeout(() => hint.classList.remove('show'), 2000);
+}
+
+function _initSwipeGestures() {
+  document.addEventListener('touchstart', _handleTouchStart, {passive: true});
+  document.addEventListener('touchend', _handleTouchEnd, {passive: true});
+}
+
 // v9.6: custom background — color + optional image. State in localStorage,
 // applied via CSS variables on :root. `_applyCustomBg` runs at boot AND
 // when settings input fires.
@@ -2414,6 +2631,11 @@ window.addEventListener('beforeunload', () => {
   // v9.6: restore panel collapse state + custom background from localStorage
   _restorePanelState();
   _applyCustomBg();
+  // v9.7: init swipe gestures for mobile + desktop
+  _initSwipeGestures();
+  // v9.7: initialize SoundFX on first user interaction (browser policy)
+  document.addEventListener('click', () => SoundFX.init(), {once: true});
+  document.addEventListener('touchstart', () => SoundFX.init(), {once: true});
   // In single-owner mode, skip the user picker entirely and pin to master.
   if (SINGLE_OWNER) {
     currentUid = 'master';
