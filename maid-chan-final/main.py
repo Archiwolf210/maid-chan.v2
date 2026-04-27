@@ -169,6 +169,7 @@ def build_prompt(uid: str, cog: Any, ltm_facts: list) -> tuple:
         KeyMemoryRepository,
         RPSceneRepository
     )
+    from app.services.nsfw import build_nsfw_prompt_instruction
     
     # Load state
     state = UserStateRepository.get(uid) or {}
@@ -196,6 +197,11 @@ def build_prompt(uid: str, cog: Any, ltm_facts: list) -> tuple:
         dynamic_parts.append(
             f"\n# RP СЦЕНА\nРежим: {rp_scene['mode']}\nЛокация: {rp_scene['location']}\nСценарий: {rp_scene['scenario']}"
         )
+    
+    # NSFW mode instruction (if active)
+    nsfw_instruction = build_nsfw_prompt_instruction(uid)
+    if nsfw_instruction:
+        dynamic_parts.append(nsfw_instruction)
     
     # Recent key memories (evolution anchors)
     key_mems = KeyMemoryRepository.get_recent(uid, limit=3)
@@ -467,12 +473,14 @@ async def lifespan(app: FastAPI):
     # Start background tasks
     cleanup_task = asyncio.create_task(cleanup_pending_task())
 
-    # Start autonomous loops (proactive + diary + tactical goals)
+    # Start autonomous loops (proactive + diary + tactical goals + reflection)
     try:
         from app.services.autonomous import start_autonomous_loops
         from app.services.tactical_goals import start_tactical_goals_loop
+        from app.services.reflection import start_reflection_loop
         start_autonomous_loops()
         start_tactical_goals_loop()
+        asyncio.create_task(start_reflection_loop())
     except Exception as e:
         _log_exc("Failed to start autonomous loops", e)
     

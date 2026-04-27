@@ -38,5 +38,19 @@
     "weekly_enabled": true,
     "tactical_goals_enabled": true,
     "arc_enabled": true
+  },
+  "nsfw_mode": {
+    "enabled": false,
+    "activation_threshold": 0.7,
+    "min_humanity_level": 0.4,
+    "min_trust": 0.6,
+    "min_affection": 0.5,
+    "cooldown_hours": 24,
+    "require_explicit_consent": true
+  },
+  "reflection": {
+    "deep_reflection_enabled": true,
+    "deep_reflection_interval_hours": 168,
+    "deep_reflection_min_humanity": 0.3
   }
 }

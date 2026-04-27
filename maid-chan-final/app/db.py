@@ -96,6 +96,9 @@ CREATE TABLE IF NOT EXISTS user_state(
     affection REAL NOT NULL DEFAULT 0.0,
     software_version TEXT NOT NULL DEFAULT '10.0.0',
     goals TEXT NOT NULL DEFAULT '[]',
+    nsfw_mode INTEGER NOT NULL DEFAULT 0,
+    last_nsfw_ts INTEGER NOT NULL DEFAULT 0,
+    last_deep_reflection_ts INTEGER NOT NULL DEFAULT 0,
     updated_at INTEGER NOT NULL DEFAULT(unixepoch())
 );
 
