@@ -17,10 +17,9 @@ from app.repositories import (
     LongTermMemoryRepository,
     KeyMemoryRepository,
     RPSceneRepository,
-    DiaryRepository,
-    reset_user_data
+    DiaryRepository
 )
-from app.db import db
+from app.db import db, reset_user_data
 
 
 router = APIRouter()

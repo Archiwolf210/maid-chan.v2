@@ -466,6 +466,13 @@ async def lifespan(app: FastAPI):
     
     # Start background tasks
     cleanup_task = asyncio.create_task(cleanup_pending_task())
+
+    # Start autonomous loops (proactive + diary)
+    try:
+        from app.services.autonomous import start_autonomous_loops
+        start_autonomous_loops()
+    except Exception as e:
+        _log_exc("Failed to start autonomous loops", e)
     
     _log("Server ready")
     

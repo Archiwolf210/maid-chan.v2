@@ -14,6 +14,11 @@ from contextlib import contextmanager
 
 from app.db import db
 
+# Import new repositories
+from .diary import DiaryRepository as NewDiaryRepository
+from .tactical_goals import TacticalGoalsRepository
+from .letters import LettersRepository
+
 
 # Whitelist of allowed user_state keys (security)
 ALLOWED_STATE_KEYS = frozenset({
