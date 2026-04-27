@@ -179,27 +179,48 @@ CREATE INDEX IF NOT EXISTS idx_clog ON cognitive_log(user_id, id DESC);
 CREATE TABLE IF NOT EXISTS letters(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id TEXT NOT NULL,
-    title TEXT NOT NULL,
-    content TEXT NOT NULL,
-    sealed INTEGER NOT NULL DEFAULT 0,
-    seal_reason TEXT NOT NULL DEFAULT '',
-    humanity_threshold REAL NOT NULL DEFAULT 0.0,
-    created_at INTEGER NOT NULL DEFAULT(unixepoch()),
-    unsealed_at INTEGER
+    key_memory_id INTEGER,
+    ts INTEGER NOT NULL DEFAULT(unixepoch()),
+    body TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'delivered',
+    triggered_by TEXT NOT NULL DEFAULT 'anchor',
+    seen_at INTEGER
 );
-CREATE INDEX IF NOT EXISTS idx_letters ON letters(user_id, sealed);
+CREATE INDEX IF NOT EXISTS idx_letters ON letters(user_id, ts DESC);
 
--- Tactical goals
+-- Tactical goals (v9.6: short-term Maid goals with horizons)
 CREATE TABLE IF NOT EXISTS tactical_goals(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id TEXT NOT NULL,
-    goal TEXT NOT NULL,
+    horizon TEXT NOT NULL DEFAULT 'day',
+    text TEXT NOT NULL,
+    reasoning TEXT NOT NULL DEFAULT '',
     status TEXT NOT NULL DEFAULT 'active',
-    priority INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER NOT NULL DEFAULT(unixepoch()),
-    updated_at INTEGER NOT NULL DEFAULT(unixepoch())
+    expires_at INTEGER NOT NULL,
+    completed_at INTEGER
 );
-CREATE INDEX IF NOT EXISTS idx_goals ON tactical_goals(user_id, status);
+CREATE INDEX IF NOT EXISTS idx_tg ON tactical_goals(user_id, status, expires_at);
+
+-- Monthly arcs (long-term memory consolidation)
+CREATE TABLE IF NOT EXISTS monthly_arcs(
+    user_id TEXT NOT NULL,
+    year_month TEXT NOT NULL,
+    arc TEXT NOT NULL,
+    ts INTEGER NOT NULL DEFAULT(unixepoch()),
+    PRIMARY KEY(user_id, year_month)
+);
+
+-- Daily summaries (source for monthly arcs)
+CREATE TABLE IF NOT EXISTS daily_summaries(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    day TEXT NOT NULL,
+    summary TEXT NOT NULL,
+    ts INTEGER NOT NULL DEFAULT(unixepoch()),
+    UNIQUE(user_id, day)
+);
+CREATE INDEX IF NOT EXISTS idx_ds ON daily_summaries(user_id, day);
 """
 
 
